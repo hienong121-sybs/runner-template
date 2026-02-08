@@ -6,6 +6,15 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [0.3.0] - 2026-02-08
+
+### Added
+- Added npm CLI package `runner-template-copy` with:
+  - `package.json` (no dependencies)
+  - `runner-template-copy.js` for copying template files into current directory
+- Added detailed copy logs with emoji, source path, destination path, and summary.
+- Added safe default behavior: skip existing files (use `--force` to overwrite).
+
 ## [0.2.0] - 2026-02-08
 
 ### Added

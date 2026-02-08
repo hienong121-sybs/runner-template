@@ -1,0 +1,13 @@
+{
+  "name": "runner-template-copy",
+  "version": "0.1.0",
+  "description": "Simple CLI to copy runner-template files into current directory",
+  "bin": {
+    "runner-template-copy": "./runner-template-copy.js"
+  },
+  "license": "MIT",
+  "files": [
+    "runner-template-copy.js",
+    "README.md"
+  ]
+}

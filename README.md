@@ -7,6 +7,7 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
 - Mau ignore cho runtime/secrets: `.gitignore`, `.npmignore`
 - Mau bien moi truong: `.env.example`
 - Lich su version template: `CHANGELOG.md`
+- CLI copy template: `runner-template-copy.js`, `package.json`
 
 ## Muc tieu
 
@@ -25,7 +26,7 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
    - `paths` (chi chay khi thay doi file/folder nay)
    - `paths-ignore`/`exclude` (bo qua docs, markdown, file khong can deploy)
 3. Chon runner:
-   - GitHub `runs-on`: `ubuntu-latest` / `windows-latest` / `macos-latest` / self-hosted
+   - GitHub `runs-on`: `ubuntu-latest` / `windows-latest` / `macos-latest` / `self-hosted`
    - Azure `vmImage`: `ubuntu-latest` / `windows-latest` / `macos-latest`
 4. Khai bao secret/variable bat buoc:
    - `DOTENVRTDB_URL`
@@ -33,6 +34,27 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
    - package can cai
    - file can pull tu `dotenvrtdb`
    - docker compose file duoc dung
+
+## CLI copy bang npm link
+
+Package nay co CLI toi gian `runner-template-copy` de copy nhanh file template.
+
+1. Tai repo `runner-template`, tao global link:
+   - `npm link`
+2. Sang repo dich (thu muc can copy file), chay:
+   - `runner-template-copy`
+3. Neu muon ghi de file da ton tai:
+   - `runner-template-copy --force`
+
+Mac dinh CLI se skip file da ton tai de an toan.
+
+File duoc copy:
+
+- `.github/workflows/deploy.yml`
+- `.azure/deploy.yml`
+- `.env.example`
+- `.gitignore`
+- `.npmignore`
 
 ## Giai thich nhanh path filter
 
@@ -58,19 +80,6 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
 
 - Xem `CHANGELOG.md` de theo doi thay doi theo tung version template.
 - Khuyen nghi tag theo format `vMAJOR.MINOR.PATCH` khi thay doi template.
-
-## De xuat nen them (cho ban xac nhan)
-
-- [x] Them `.env.example` list day du key can co (`DOTENVRTDB_URL`, `CLOUDFLARED_*`, `DOCKER_COMPOSE`...).
-- [ ] Them `templates/` cho nhieu profile deploy:
-  - `node-basic`
-  - `docker-compose`
-  - `self-hosted-runner`
-- [ ] Them buoc smoke-check sau `docker compose up` (health endpoint hoac container status).
-- [ ] Them buoc fail-fast neu thieu secret bat buoc truoc khi deploy.
-- [ ] Them workflow lint YAML (`actionlint`) de check template truoc khi copy.
-- [ ] Them huong dan rieng cho `windows-latest` (doi script shell sang pwsh).
-- [x] Them changelog cho template de theo doi su thay doi giua cac version.
 
 ## Luu y
 
