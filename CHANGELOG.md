@@ -6,6 +6,57 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [0.5.0] - 2026-02-08
+
+### Changed
+- Updated tunnel-name resolution priority:
+  - use `CLOUDFLARED_TUNNEL_NAME` first (no suffix)
+  - fallback to prefixed keys `CLOUDFLARED_TUNNEL_NAME_xx` when the non-prefixed key is missing
+- Added idempotent tunnel/DNS behavior:
+  - if tunnel already exists, treat as success and continue
+  - if DNS record already exists, treat as success and continue
+- Added `cloudflared-config.yml` generation in cwd with:
+  - `tunnel: <TunnelID>`
+  - `credentials-file: /etc/cloudflared/credentials.json`
+  - ingress rules from env domains
+  - `ssh://localhost:${SSH_PORT}` for hostnames starting with `ssh`
+  - default service `http://localhost:8045` for non-ssh hostnames
+- Updated credentials output (`cloudflared-credentials.json`):
+  - include tunnel metadata + domain list
+  - include `tunnel_ref` (TunnelID if available, otherwise tunnel name)
+  - include generated config content
+  - include `base64` field computed from file content before `base64` is added
+  - fallback to `cloudflared tunnel token <name>` when local credentials JSON cannot be found
+- Updated `.env.example` and `README.md` for the new env format and outputs.
+
+## [0.4.1] - 2026-02-08
+
+### Changed
+- Updated `runner-template-createtunnel` behavior to use exactly one tunnel name with many DNS domains:
+  - tunnel name is read from `CLOUDFLARED_TUNNEL_NAME` or `CLOUDFLARED_TUNNEL_NAME_xx`
+  - domains are read from `CLOUDFLARED_TUNNEL_DOMAIN_xx`
+  - tunnel is created once, then DNS records are routed one by one for that same tunnel
+- Updated credentials output behavior:
+  - now writes only `cloudflared-credentials.json` in cwd
+  - now adds `tunnul_domains` array metadata (in addition to `tunnel_name` and `tunnul_domain`)
+- Updated docs and `.env.example` to reflect single-tunnel multi-domain configuration.
+
+## [0.4.0] - 2026-02-08
+
+### Added
+- Added new CLI command `runner-template-createtunnel` (implemented in `runner-template-copy.js`) to:
+  - scan env pairs `CLOUDFLARED_TUNNEL_NAME_xx` + `CLOUDFLARED_TUNNEL_DOMAIN_xx`
+  - confirm total pairs before execution
+  - run and log `cloudflared tunnel create` and `cloudflared tunnel route dns`
+- Added credentials discovery workflow:
+  - parse `.json` path from `cloudflared` output when available
+  - fallback scan in default `.cloudflared` directory for newly created credentials file
+  - copy/enrich credentials to cwd with `tunnel_name` and `tunnul_domain`
+- Added CLI flag `--yes` for non-interactive confirmation bypass.
+- Added wrapper entry file `runner-template-createtunnel.js` and npm `bin` mapping.
+- Added env examples for tunnel pairs in `.env.example`.
+- Added documentation for tunnel CLI usage and prerequisites in `README.md`.
+
 ## [0.3.0] - 2026-02-08
 
 ### Added

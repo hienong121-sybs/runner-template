@@ -1,13 +1,15 @@
 {
   "name": "runner-template-copy",
-  "version": "0.1.0",
-  "description": "Simple CLI to copy runner-template files into current directory",
+  "version": "0.5.0",
+  "description": "CLI tools to copy runner-template files and create Cloudflare tunnels from env",
   "bin": {
-    "runner-template-copy": "./runner-template-copy.js"
+    "runner-template-copy": "./runner-template-copy.js",
+    "runner-template-createtunnel": "./runner-template-createtunnel.js"
   },
   "license": "MIT",
   "files": [
     "runner-template-copy.js",
+    "runner-template-createtunnel.js",
     "README.md"
   ]
 }
