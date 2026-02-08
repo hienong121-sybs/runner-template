@@ -57,7 +57,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20" # Options: 18, 20, 22
-          cache: "npm" # Options: npm, yarn, pnpm
+          # cache: "npm" # Options: npm, yarn, pnpm
           # cache-dependency-path: "**/package-lock.json"
 
       - name: npm-installed
