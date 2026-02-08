@@ -1,0 +1,34 @@
+# ==============================================================================
+# TAILSCALE-CLOUDFLARED CONFIGURATION (LINUX)
+# ==============================================================================
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: github-runner
+    network_mode: "host"
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_CLIENT_SECRET}
+      - TS_USERSPACE=false
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--advertise-tags=${TAILSCALE_TAGS:-tag:ci} --accept-dns=true --accept-routes
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    network_mode: "host"
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared-credentials.json:/etc/cloudflared/credentials.json:ro
+
+volumes:
+  tailscale-data:
+    driver: local

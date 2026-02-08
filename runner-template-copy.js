@@ -16,6 +16,7 @@ const templateFiles = [
   ".env/cloudflared-credentials.json",
   ".env/cloudflare-tunnel.cmd",
   ".env/env.env-rtdb-path.push.cmd",
+  "docker-compose.yml",
 ];
 
 const sourceRoot = __dirname;
@@ -114,9 +115,7 @@ async function runCreateTunnelCli(rawArgs) {
   }
 
   if (config.ignoredNameKeys.length > 0) {
-    console.log(
-      "warning: ignored prefixed tunnel-name variable(s) because CLOUDFLARED_TUNNEL_NAME is set:"
-    );
+    console.log("warning: ignored prefixed tunnel-name variable(s) because CLOUDFLARED_TUNNEL_NAME is set:");
     for (const key of config.ignoredNameKeys) {
       console.log(`- ${key}`);
     }
@@ -138,7 +137,7 @@ async function runCreateTunnelCli(rawArgs) {
     }
     console.error("");
     console.error(
-      "expected one tunnel name and at least one domain. Example: CLOUDFLARED_TUNNEL_NAME + CLOUDFLARED_TUNNEL_DOMAIN_00, CLOUDFLARED_TUNNEL_DOMAIN_01."
+      "expected one tunnel name and at least one domain. Example: CLOUDFLARED_TUNNEL_NAME + CLOUDFLARED_TUNNEL_DOMAIN_00, CLOUDFLARED_TUNNEL_DOMAIN_01.",
     );
     process.exit(1);
   }
@@ -151,9 +150,7 @@ async function runCreateTunnelCli(rawArgs) {
   console.log("");
 
   if (!autoYes) {
-    const approved = await askForConfirmation(
-      `Create tunnel "${config.tunnelName}" and route ${config.domains.length} DNS record(s)? (yes/no): `
-    );
+    const approved = await askForConfirmation(`Create tunnel "${config.tunnelName}" and route ${config.domains.length} DNS record(s)? (yes/no): `);
     if (!approved) {
       console.log("cancelled by user.");
       return;
@@ -172,9 +169,7 @@ async function runCreateTunnelCli(rawArgs) {
   }
 
   console.log("");
-  console.log(
-    `summary: tunnel_created=${result.tunnelCreated ? 1 : 0}, dns_success=${result.dnsSuccess}, dns_failed=${result.dnsFailed}`
-  );
+  console.log(`summary: tunnel_created=${result.tunnelCreated ? 1 : 0}, dns_success=${result.dnsSuccess}, dns_failed=${result.dnsFailed}`);
   if (result.dnsFailed > 0) {
     process.exit(1);
   }
@@ -229,12 +224,10 @@ function collectTunnelConfig(env) {
       left.suffix.localeCompare(right.suffix, undefined, {
         numeric: true,
         sensitivity: "base",
-      })
+      }),
     );
 
-  const uniquePrefixNames = Array.from(
-    new Set(prefixNameEntries.map((item) => item.name))
-  );
+  const uniquePrefixNames = Array.from(new Set(prefixNameEntries.map((item) => item.name)));
   const errors = [];
   let tunnelName = "";
 
@@ -248,24 +241,16 @@ function collectTunnelConfig(env) {
   } else if (uniquePrefixNames.length === 1) {
     tunnelName = uniquePrefixNames[0];
   } else if (uniquePrefixNames.length > 1) {
-    const sources = prefixNameEntries
-      .map((item) => `${item.key}=${item.name}`)
-      .join(", ");
-    errors.push(
-      `found multiple prefixed tunnel names. Only one tunnel is allowed. Current values: ${sources}`
-    );
+    const sources = prefixNameEntries.map((item) => `${item.key}=${item.name}`).join(", ");
+    errors.push(`found multiple prefixed tunnel names. Only one tunnel is allowed. Current values: ${sources}`);
   }
 
   if (!tunnelName && uniquePrefixNames.length === 0) {
-    errors.push(
-      "missing tunnel name. Set CLOUDFLARED_TUNNEL_NAME, or set one unique value in CLOUDFLARED_TUNNEL_NAME_00."
-    );
+    errors.push("missing tunnel name. Set CLOUDFLARED_TUNNEL_NAME, or set one unique value in CLOUDFLARED_TUNNEL_NAME_00.");
   }
 
   if (domains.length === 0) {
-    errors.push(
-      "missing domain list. Set at least one variable with prefix CLOUDFLARED_TUNNEL_DOMAIN_."
-    );
+    errors.push("missing domain list. Set at least one variable with prefix CLOUDFLARED_TUNNEL_DOMAIN_.");
   }
 
   return {
@@ -295,11 +280,7 @@ function createSingleTunnelWithManyDns(config) {
   let createOutput = "";
   let tunnelCreated = false;
   if (!tunnelAlreadyExists) {
-    const createResult = runCommand(
-      "cloudflared",
-      ["tunnel", "create", config.tunnelName],
-      { allowFailure: true }
-    );
+    const createResult = runCommand("cloudflared", ["tunnel", "create", config.tunnelName], { allowFailure: true });
     createOutput = combineCommandOutput(createResult);
 
     if (createResult.status === 0) {
@@ -307,15 +288,11 @@ function createSingleTunnelWithManyDns(config) {
     } else if (isTunnelAlreadyExistsOutput(createOutput)) {
       console.log("info: tunnel already exists, treating as success.");
     } else {
-      throw new Error(
-        `failed to create tunnel "${config.tunnelName}" and it does not look like an existing-tunnel case`
-      );
+      throw new Error(`failed to create tunnel "${config.tunnelName}" and it does not look like an existing-tunnel case`);
     }
   }
 
-  const tunnelInfo = tunnelAlreadyExists
-    ? existingTunnelInfo
-    : getTunnelInfoByName(config.tunnelName);
+  const tunnelInfo = tunnelAlreadyExists ? existingTunnelInfo : getTunnelInfoByName(config.tunnelName);
   const tunnelIdFromOutput = extractTunnelIdFromText(createOutput);
   const tunnelId = tunnelInfo.tunnelId || tunnelIdFromOutput;
 
@@ -330,18 +307,12 @@ function createSingleTunnelWithManyDns(config) {
   let tunnelToken = "";
 
   if (!credentialData) {
-    console.log(
-      "warning: credentials .json not found from local files, trying cloudflared tunnel token API fallback."
-    );
+    console.log("warning: credentials .json not found from local files, trying cloudflared tunnel token API fallback.");
     tunnelToken = fetchTunnelTokenFromApi(config.tunnelName);
-    credentialData = buildDefaultCredentialContent(
-      tunnelId,
-      tunnelToken
-    );
+    credentialData = buildDefaultCredentialContent(tunnelId, tunnelToken);
   }
 
-  const resolvedTunnelId =
-    tunnelId || String(credentialData.TunnelID || "").trim();
+  const resolvedTunnelId = tunnelId || String(credentialData.TunnelID || "").trim();
   const tunnelRef = resolvedTunnelId || config.tunnelName;
 
   let dnsSuccess = 0;
@@ -350,40 +321,28 @@ function createSingleTunnelWithManyDns(config) {
   for (let index = 0; index < config.domains.length; index += 1) {
     const domainItem = config.domains[index];
     console.log("");
-    console.log(
-      `[dns ${index + 1}/${config.domains.length}] tunnel="${config.tunnelName}" domain="${domainItem.domain}"`
-    );
-    const routeResult = runCommand(
-      "cloudflared",
-      ["tunnel", "route", "dns", config.tunnelName, domainItem.domain],
-      { allowFailure: true }
-    );
+    console.log(`[dns ${index + 1}/${config.domains.length}] tunnel="${config.tunnelName}" domain="${domainItem.domain}"`);
+    const routeResult = runCommand("cloudflared", ["tunnel", "route", "dns", config.tunnelName, domainItem.domain], { allowFailure: true });
     if (routeResult.status === 0) {
       dnsSuccess += 1;
       continue;
     }
 
     if (isDnsAlreadyExistsOutput(combineCommandOutput(routeResult))) {
-      console.log(
-        `info: dns record already exists for ${domainItem.domain}, treating as success.`
-      );
+      console.log(`info: dns record already exists for ${domainItem.domain}, treating as success.`);
       dnsSuccess += 1;
       continue;
     }
 
     dnsFailed += 1;
-    console.error(
-      `failed dns route [${domainItem.suffix}] ${domainItem.domain}: command returned non-zero status`
-    );
+    console.error(`failed dns route [${domainItem.suffix}] ${domainItem.domain}: command returned non-zero status`);
   }
 
   const configOutput = writeCloudflaredConfigFile({
     tunnel: tunnelRef,
     domains: config.domains.map((item) => item.domain),
     sshPort: parseSshPort(process.env.SSH_PORT),
-    defaultService:
-      normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) ||
-      "http://localhost:8045",
+    defaultService: normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) || "http://localhost:8045",
   });
 
   const credentialOutput = writeEnrichedCredentialFile({
@@ -396,9 +355,7 @@ function createSingleTunnelWithManyDns(config) {
     tunnelToken,
   });
 
-  console.log(
-    `credentials source: ${credentialPath || "not found locally (used fallback content)"}`
-  );
+  console.log(`credentials source: ${credentialPath || "not found locally (used fallback content)"}`);
   console.log(`config output: ${configOutput.filePath}`);
 
   return {
@@ -517,12 +474,7 @@ function snapshotCredentialFiles(directories) {
   return snapshot;
 }
 
-function resolveCredentialPath({
-  commandOutput,
-  searchDirs,
-  beforeSnapshot,
-  tunnelId,
-}) {
+function resolveCredentialPath({ commandOutput, searchDirs, beforeSnapshot, tunnelId }) {
   const pathsFromOutput = extractJsonPathsFromText(commandOutput).filter((item) => fs.existsSync(item));
   for (const candidate of pathsFromOutput) {
     if (looksLikeCredentialJson(candidate)) {
@@ -635,24 +587,17 @@ function readCredentialJson(filePath) {
 }
 
 function getTunnelInfoByName(tunnelName) {
-  const listJsonResult = runCommand(
-    "cloudflared",
-    ["tunnel", "list", "--output", "json"],
-    { allowFailure: true }
-  );
+  const listJsonResult = runCommand("cloudflared", ["tunnel", "list", "--output", "json"], { allowFailure: true });
   if (listJsonResult.status === 0) {
     try {
       const parsed = JSON.parse(listJsonResult.stdout || "[]");
       if (Array.isArray(parsed)) {
         const found = parsed.find((item) => {
-          const name =
-            String(item.Name || item.name || item.TunnelName || "").trim();
+          const name = String(item.Name || item.name || item.TunnelName || "").trim();
           return name === tunnelName;
         });
         if (found) {
-          const tunnelId = String(
-            found.ID || found.id || found.TunnelID || found.tunnelId || ""
-          ).trim();
+          const tunnelId = String(found.ID || found.id || found.TunnelID || found.tunnelId || "").trim();
           return {
             tunnelId,
           };
@@ -663,11 +608,7 @@ function getTunnelInfoByName(tunnelName) {
     }
   }
 
-  const infoResult = runCommand(
-    "cloudflared",
-    ["tunnel", "info", tunnelName],
-    { allowFailure: true }
-  );
+  const infoResult = runCommand("cloudflared", ["tunnel", "info", tunnelName], { allowFailure: true });
   if (infoResult.status === 0) {
     const tunnelId = extractTunnelIdFromText(combineCommandOutput(infoResult));
     return {
@@ -681,9 +622,7 @@ function getTunnelInfoByName(tunnelName) {
 }
 
 function extractTunnelIdFromText(text) {
-  const match = String(text || "").match(
-    /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i
-  );
+  const match = String(text || "").match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i);
   return match ? match[0].toLowerCase() : "";
 }
 
@@ -701,19 +640,13 @@ function buildDefaultCredentialContent(tunnelId, tunnelToken) {
 }
 
 function fetchTunnelTokenFromApi(tunnelName) {
-  const tokenResult = runCommand(
-    "cloudflared",
-    ["tunnel", "token", tunnelName],
-    { allowFailure: true }
-  );
+  const tokenResult = runCommand("cloudflared", ["tunnel", "token", tunnelName], { allowFailure: true });
   if (tokenResult.status !== 0) {
     return "";
   }
 
   const output = combineCommandOutput(tokenResult);
-  const match = output.match(
-    /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/
-  );
+  const match = output.match(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/);
   if (match) {
     return match[0];
   }
@@ -730,12 +663,7 @@ function writeCloudflaredConfigFile(options) {
   const domains = Array.isArray(options.domains) ? options.domains : [];
   const sshPort = options.sshPort;
   const defaultService = options.defaultService;
-  const lines = [
-    `tunnel: ${tunnel}`,
-    "credentials-file: /etc/cloudflared/credentials.json",
-    "",
-    "ingress:",
-  ];
+  const lines = [`tunnel: ${tunnel}`, "credentials-file: /etc/cloudflared/credentials.json", "", "ingress:"];
 
   let hasSshComment = false;
   for (const domain of domains) {
@@ -745,9 +673,7 @@ function writeCloudflaredConfigFile(options) {
     }
     const service = serviceForDomain(hostname, sshPort, defaultService);
     if (service.startsWith("ssh://") && !hasSshComment) {
-      lines.push(
-        "  # SSH over Cloudflare Tunnel (requires DNS record + Cloudflare Access policy)."
-      );
+      lines.push("  # SSH over Cloudflare Tunnel (requires DNS record + Cloudflare Access policy).");
       hasSshComment = true;
     }
     lines.push(`  - hostname: ${hostname}`);
@@ -786,10 +712,7 @@ function parseSshPort(rawValue) {
 }
 
 function writeEnrichedCredentialFile(options) {
-  const credentialData =
-    options.credentialData && typeof options.credentialData === "object"
-      ? options.credentialData
-      : {};
+  const credentialData = options.credentialData && typeof options.credentialData === "object" ? options.credentialData : {};
   const config = options.config;
   const sourcePath = String(options.sourcePath || "");
   const tunnelToken = String(options.tunnelToken || "");
@@ -811,11 +734,7 @@ function writeEnrichedCredentialFile(options) {
     source_credentials_file: sourcePath,
   };
 
-  const serializedWithoutBase64 = `${JSON.stringify(
-    payloadWithoutBase64,
-    null,
-    2
-  )}\n`;
+  const serializedWithoutBase64 = `${JSON.stringify(payloadWithoutBase64, null, 2)}\n`;
   const output = {
     ...payloadWithoutBase64,
     base64: Buffer.from(serializedWithoutBase64, "utf8").toString("base64"),
