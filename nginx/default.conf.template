@@ -8,7 +8,7 @@ server {
 
   location = /cwd {
     default_type text/plain;
-    return 200 "HOST_CWD=${HOST_CWD}\n";
+    return 200 "${HOST_CWD}";
   }
 
   location / {
