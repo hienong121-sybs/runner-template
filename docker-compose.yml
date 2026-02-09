@@ -20,6 +20,22 @@ services:
       - NET_RAW
     restart: unless-stopped
 
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - tailscale
+    network_mode: "host"
+    environment:
+      - HOST_CWD=${HOST_CWD:-${PWD}}
+      - MAIN_URL=http://localhost # url or container_name: main-service
+      - MAIN_PORT="3000"
+      - HOLD_URL=http://localhost # url or container_name: hold-service
+      - HOLD_PORT="4000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf:ro
+    ports:
+      - "8080:8080"
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
