@@ -6,6 +6,14 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [0.8.1] - 2026-02-09
+
+### Changed
+- Switched runtime `pull-data` implementation from shell + local `tailscale status --json` to Node.js (`scripts/pull-data.js`) using Tailscale OAuth + Devices API.
+- Updated `docker-compose.yml` `pull-data` service to run `node /opt/pull-data.js` and pass Tailscale API auth env vars.
+- Updated template copy/publish lists to include `scripts/pull-data.js`.
+- Updated `README.md` runtime pull-data section to document API-based flow.
+
 ## [0.8.0] - 2026-02-09
 
 ### Added

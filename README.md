@@ -82,7 +82,7 @@ File duoc copy:
 - `tailscale/access-controls.hujson`
 - `docker-compose.yml`
 - `nginx/default.conf.template`
-- `scripts/pull-data.sh`
+- `scripts/pull-data.js`
 
 ### 2) CLI tao Cloudflare tunnel
 
@@ -208,7 +208,8 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - `cwd`: gia tri `HOST_CWD`
   - `startTime`: timestamp UTC khi container nginx khoi dong
 - Service `pull-data` se:
-  - goi `tailscale status --json` de tim peers dang active (loai tru self)
+  - tu tao OAuth access token tu `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET`
+  - goi Tailscale API `/api/v2/tailnet/{tailnet}/devices` de lay danh sach may dang active + IPv4
   - goi `http://<peer-ip>:8080/cwd` de lay `cwd` + `startTime`
   - chi chon 1 peer co `startTime` moi nhat trong danh sach hop le
   - rsync tung thu muc trong `PULL_DATA_SYNC_DIRS` ve `HOST_CWD` qua SSH
@@ -219,6 +220,8 @@ Bien moi truong quan trong:
 
 - `PULL_DATA_SYNC_DIRS=.pocketbase`
 - `HOST_CWD=<duong-dan-local-cua-runner>`
+- `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
+- `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 
 ## Giai thich nhanh path filter
 

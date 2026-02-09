@@ -16,7 +16,7 @@
     "runner-template-tailscale.js",
     "docker-compose.yml",
     "nginx/default.conf.template",
-    "scripts/pull-data.sh",
+    "scripts/pull-data.js",
     "tailscale/**/*",
     "README.md"
   ]

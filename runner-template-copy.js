@@ -20,7 +20,7 @@ const templateFiles = [
   "tailscale/access-controls.hujson",
   "docker-compose.yml",
   "nginx/default.conf.template",
-  "scripts/pull-data.sh",
+  "scripts/pull-data.js",
 ];
 
 const sourceRoot = __dirname;
