@@ -12,6 +12,8 @@ const TAILSCALE_TAILNET = normalizeEnv(process.env.TAILSCALE_TAILNET) || "-";
 const TAILSCALE_API_BASE_URL = (normalizeEnv(process.env.TAILSCALE_API_BASE_URL) || "https://api.tailscale.com").replace(/\/+$/, "");
 const CWD_PORT = normalizePositiveInt(process.env.PULL_DATA_CWD_PORT, 8080);
 const HTTP_TIMEOUT_MS = normalizePositiveInt(process.env.PULL_DATA_HTTP_TIMEOUT_MS, 5000);
+const SSH_PORT = normalizePositiveInt(process.env.PULL_DATA_SSH_PORT || process.env.SSH_PORT, 2222);
+const SSH_USER = normalizeEnv(process.env.PULL_DATA_SSH_USER);
 
 function log(message) {
   process.stdout.write(`[pull-data] ${message}\n`);
@@ -64,6 +66,7 @@ async function main() {
   log(`selected ip=${selected.ip} startTime=${selected.startTime || "unknown"}`);
   log(`remote cwd: ${selected.cwd}`);
   log(`local cwd: ${HOST_CWD}`);
+  log(`ssh port: ${SSH_PORT}`);
 
   syncFromPeer(selected);
   log("done");
@@ -272,6 +275,7 @@ function parseTimestamp(value) {
 
 function syncFromPeer(peer) {
   const dirs = splitSyncDirs(PULL_DATA_SYNC_DIRS);
+  const sshTarget = resolveSshTarget(peer);
   let index = 0;
 
   for (const dir of dirs) {
@@ -288,15 +292,20 @@ function syncFromPeer(peer) {
 
     log("");
     log(`[sync ${index}] ${dir}`);
-    log(`  remote: ${peer.ip}:${remotePath}/`);
+    log(`  remote: ${sshTarget}:${remotePath}/`);
     log(`  local:  ${localPath}/`);
 
-    if (!remoteDirectoryExists(peer.ip, remotePath)) {
-      warn(`remote path missing: ${remotePath}`);
+    const remoteCheck = remoteDirectoryExists(sshTarget, remotePath);
+    if (!remoteCheck.exists) {
+      if (remoteCheck.errorMessage) {
+        warn(`ssh check failed (${sshTarget}): ${remoteCheck.errorMessage}`);
+      } else {
+        warn(`remote path missing: ${remotePath}`);
+      }
       continue;
     }
 
-    runRsync(peer.ip, remotePath, localPath, dir);
+    runRsync(sshTarget, remotePath, localPath, dir);
   }
 }
 
@@ -306,16 +315,30 @@ function buildRemotePath(remoteCwd, dir) {
   return `${normalizedCwd}/${normalizedDir}`;
 }
 
-function remoteDirectoryExists(ip, remotePath) {
+function remoteDirectoryExists(sshTarget, remotePath) {
   const escapedRemotePath = shellSingleQuote(remotePath);
-  const result = spawnSync("ssh", [...sshBaseArgs(), ip, `test -d ${escapedRemotePath}`], {
-    stdio: "ignore",
+  const result = spawnSync("ssh", [...sshBaseArgs(), sshTarget, `test -d ${escapedRemotePath}`], {
+    stdio: "pipe",
     encoding: "utf8",
   });
-  return result.status === 0;
+  if (result.status === 0) {
+    return { exists: true, errorMessage: "" };
+  }
+
+  const stderr = normalizeEnv(result.stderr);
+  const stdout = normalizeEnv(result.stdout);
+  const output = stderr || stdout;
+  if (result.status === 1 && !output) {
+    return { exists: false, errorMessage: "" };
+  }
+
+  return {
+    exists: false,
+    errorMessage: output || `exit status ${String(result.status)}`,
+  };
 }
 
-function runRsync(ip, remotePath, localPath, dir) {
+function runRsync(sshTarget, remotePath, localPath, dir) {
   const rsyncRsh = ["ssh", ...sshBaseArgs()].join(" ");
   const result = spawnSync(
     "rsync",
@@ -325,7 +348,7 @@ function runRsync(ip, remotePath, localPath, dir) {
       "--exclude=.git/",
       "--exclude=**/.git/",
       "--info=NAME,STATS2,PROGRESS2",
-      `${ip}:${remotePath}/`,
+      `${sshTarget}:${remotePath}/`,
       `${localPath}/`,
     ],
     {
@@ -366,11 +389,48 @@ function isSafeRelativePath(value) {
 
 function sshBaseArgs() {
   return [
+    "-p",
+    String(SSH_PORT),
     "-o",
     "StrictHostKeyChecking=no",
     "-o",
     "UserKnownHostsFile=/dev/null",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=8",
   ];
+}
+
+function resolveSshTarget(peer) {
+  const user = SSH_USER || inferUserFromCwd(peer && peer.cwd);
+  if (user) {
+    return `${user}@${peer.ip}`;
+  }
+  return peer.ip;
+}
+
+function inferUserFromCwd(cwd) {
+  const normalized = normalizeEnv(cwd);
+  if (!normalized) {
+    return "";
+  }
+
+  const linuxHome = normalized.match(/^\/home\/([^/]+)(\/|$)/);
+  if (linuxHome) {
+    return linuxHome[1];
+  }
+
+  const macHome = normalized.match(/^\/Users\/([^/]+)(\/|$)/);
+  if (macHome) {
+    return macHome[1];
+  }
+
+  if (/^\/root(\/|$)/.test(normalized)) {
+    return "root";
+  }
+
+  return "";
 }
 
 function hasCommand(command) {

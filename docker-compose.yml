@@ -1,1 +1,91 @@
-IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBUQUlMU0NBTEUtQ0xPVURGTEFSRUQgQ09ORklHVVJBVElPTiAoTElOVVgpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpzZXJ2aWNlczoKICB0YWlsc2NhbGU6CiAgICBpbWFnZTogdGFpbHNjYWxlL3RhaWxzY2FsZTpsYXRlc3QKICAgIGhvc3RuYW1lOiBnaXRodWItcnVubmVyCiAgICBuZXR3b3JrX21vZGU6ICJob3N0IgogICAgZW52aXJvbm1lbnQ6CiAgICAgIC0gVFNfQVVUSEtFWT0ke1RBSUxTQ0FMRV9DTElFTlRfU0VDUkVUfQogICAgICAtIFRTX1VTRVJTUEFDRT1mYWxzZQogICAgICAtIFRTX1NUQVRFX0RJUj0vdmFyL2xpYi90YWlsc2NhbGUKICAgICAgLSBUU19TT0NLRVQ9L3Zhci9ydW4vdGFpbHNjYWxlL3RhaWxzY2FsZWQuc29jawogICAgICAtIFRTX0VYVFJBX0FSR1M9LS1hZHZlcnRpc2UtdGFncz0ke1RBSUxTQ0FMRV9UQUdTOi10YWc6Y2l9IC0tYWNjZXB0LWRucz10cnVlIC0tYWNjZXB0LXJvdXRlcwogICAgdm9sdW1lczoKICAgICAgLSB0YWlsc2NhbGUtZGF0YTovdmFyL2xpYi90YWlsc2NhbGUKICAgICAgLSB0YWlsc2NhbGUtc29ja2V0Oi92YXIvcnVuL3RhaWxzY2FsZQogICAgICAtIC9kZXYvbmV0L3R1bjovZGV2L25ldC90dW4KICAgIGNhcF9hZGQ6CiAgICAgIC0gTkVUX0FETUlOCiAgICAgIC0gTkVUX1JBVwogICAgcmVzdGFydDogdW5sZXNzLXN0b3BwZWQKCiAgcHVsbC1kYXRhOgogICAgaW1hZ2U6IHRhaWxzY2FsZS90YWlsc2NhbGU6bGF0ZXN0CiAgICBkZXBlbmRzX29uOgogICAgICB0YWlsc2NhbGU6CiAgICAgICAgY29uZGl0aW9uOiBzZXJ2aWNlX3N0YXJ0ZWQKICAgIG5ldHdvcmtfbW9kZTogInNlcnZpY2U6dGFpbHNjYWxlIgogICAgcmVzdGFydDogIm5vIgogICAgZW52aXJvbm1lbnQ6CiAgICAgIC0gSE9TVF9DV0Q9JHtIT1NUX0NXRDotJHtQV0R9fQogICAgICAtIFBVTExfREFUQV9TWU5DX0RJUlM9JHtQVUxMX0RBVEFfU1lOQ19ESVJTOi0ucG9ja2V0YmFzZX0KICAgICAgLSBUQUlMU0NBTEVfQ0xJRU5UX0lEPSR7VEFJTFNDQUxFX0NMSUVOVF9JRDotJHtUU19DTElFTlRfSUQ6LX19CiAgICAgIC0gVEFJTFNDQUxFX0NMSUVOVF9TRUNSRVQ9JHtUQUlMU0NBTEVfQ0xJRU5UX1NFQ1JFVDotJHtUU19DTElFTlRfU0VDUkVUOi19fQogICAgICAtIFRBSUxTQ0FMRV9UQUlMTkVUPSR7VEFJTFNDQUxFX1RBSUxORVQ6LS19CiAgICAgIC0gVEFJTFNDQUxFX0FQSV9CQVNFX1VSTD0ke1RBSUxTQ0FMRV9BUElfQkFTRV9VUkw6LWh0dHBzOi8vYXBpLnRhaWxzY2FsZS5jb219CiAgICAgIC0gUFVMTF9EQVRBX0NXRF9QT1JUPSR7UFVMTF9EQVRBX0NXRF9QT1JUOi04MDgwfQogICAgICAtIFBVTExfREFUQV9IVFRQX1RJTUVPVVRfTVM9JHtQVUxMX0RBVEFfSFRUUF9USU1FT1VUX01TOi01MDAwfQogICAgdm9sdW1lczoKICAgICAgLSAke0hPU1RfQ1dEOi0ke1BXRH19OiR7SE9TVF9DV0Q6LSR7UFdEfX0KICAgICAgLSAke0hPTUU6LS9yb290fS8uc3NoOi9yb290Ly5zc2g6cm8KICAgICAgLSAuL3NjcmlwdHMvcHVsbC1kYXRhLmpzOi9vcHQvcHVsbC1kYXRhLmpzOnJvCiAgICBlbnRyeXBvaW50OgogICAgICAtIC9iaW4vc2gKICAgICAgLSAtZWMKICAgICAgLSB8CiAgICAgICAgaWYgY29tbWFuZCAtdiBhcGsgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgICBhcGsgYWRkIC0tbm8tY2FjaGUgbm9kZWpzIHJzeW5jIG9wZW5zc2gtY2xpZW50ID4vZGV2L251bGwKICAgICAgICBmaQogICAgICAgIGV4ZWMgbm9kZSAvb3B0L3B1bGwtZGF0YS5qcwoKICBuZ2lueDoKICAgIGltYWdlOiBuZ2lueDphbHBpbmUKICAgIGRlcGVuZHNfb246CiAgICAgIHRhaWxzY2FsZToKICAgICAgICBjb25kaXRpb246IHNlcnZpY2Vfc3RhcnRlZAogICAgICBwdWxsLWRhdGE6CiAgICAgICAgY29uZGl0aW9uOiBzZXJ2aWNlX2NvbXBsZXRlZF9zdWNjZXNzZnVsbHkKICAgIG5ldHdvcmtfbW9kZTogImhvc3QiCiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZAogICAgZW52aXJvbm1lbnQ6CiAgICAgIC0gSE9TVF9DV0Q9JHtIT1NUX0NXRDotJHtQV0R9fQogICAgICAtIE1BSU5fVVJMPSR7TUFJTl9VUkw6LWxvY2FsaG9zdH0gIyBob3N0IG9yIGNvbnRhaW5lcl9uYW1lOiBtYWluLXNlcnZpY2UKICAgICAgLSBNQUlOX1BPUlQ9JHtNQUlOX1BPUlQ6LTMwMDB9CiAgICAgIC0gSE9MRF9VUkw9JHtIT0xEX1VSTDotbG9jYWxob3N0fSAjIGhvc3Qgb3IgY29udGFpbmVyX25hbWU6IGhvbGQtc2VydmljZQogICAgICAtIEhPTERfUE9SVD0ke0hPTERfUE9SVDotNDAwMH0KICAgIGNvbW1hbmQ6CiAgICAgIC0gL2Jpbi9zaAogICAgICAtIC1lYwogICAgICAtIHwKICAgICAgICBleHBvcnQgUlVOTkVSX1NUQVJUX1RJTUU9IiQoZGF0ZSAtdSArJVktJW0tJWRUJUg6JU06JVNaKSIKICAgICAgICBleGVjIC9kb2NrZXItZW50cnlwb2ludC5zaCBuZ2lueCAtZyAnZGFlbW9uIG9mZjsnCiAgICB2b2x1bWVzOgogICAgICAtIC4vbmdpbngvZGVmYXVsdC5jb25mLnRlbXBsYXRlOi9ldGMvbmdpbngvdGVtcGxhdGVzL2RlZmF1bHQuY29uZi50ZW1wbGF0ZTpybwoKICBjbG91ZGZsYXJlZDoKICAgIGltYWdlOiBjbG91ZGZsYXJlL2Nsb3VkZmxhcmVkOmxhdGVzdAogICAgcmVzdGFydDogdW5sZXNzLXN0b3BwZWQKICAgIG5ldHdvcmtfbW9kZTogImhvc3QiCiAgICBjb21tYW5kOiB0dW5uZWwgLS1jb25maWcgL2V0Yy9jbG91ZGZsYXJlZC9jb25maWcueW1sIHJ1bgogICAgdm9sdW1lczoKICAgICAgLSAuL2Nsb3VkZmxhcmVkLWNvbmZpZy55bWw6L2V0Yy9jbG91ZGZsYXJlZC9jb25maWcueW1sOnJvCiAgICAgIC0gLi9jbG91ZGZsYXJlZC1jcmVkZW50aWFscy5qc29uOi9ldGMvY2xvdWRmbGFyZWQvY3JlZGVudGlhbHMuanNvbjpybwoKdm9sdW1lczoKICB0YWlsc2NhbGUtZGF0YToKICAgIGRyaXZlcjogbG9jYWwKICB0YWlsc2NhbGUtc29ja2V0OgogICAgZHJpdmVyOiBsb2NhbAo=
+# ==============================================================================
+# TAILSCALE-CLOUDFLARED CONFIGURATION (LINUX)
+# ==============================================================================
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: github-runner
+    network_mode: "host"
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_CLIENT_SECRET}
+      - TS_USERSPACE=false
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SOCKET=/var/run/tailscale/tailscaled.sock
+      - TS_EXTRA_ARGS=--advertise-tags=${TAILSCALE_TAGS:-tag:ci} --accept-dns=true --accept-routes
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+      - tailscale-socket:/var/run/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  pull-data:
+    image: tailscale/tailscale:latest
+    depends_on:
+      tailscale:
+        condition: service_started
+    network_mode: "service:tailscale"
+    restart: "no"
+    environment:
+      - HOST_CWD=${HOST_CWD:-${PWD}}
+      - PULL_DATA_SYNC_DIRS=${PULL_DATA_SYNC_DIRS:-.pocketbase}
+      - TAILSCALE_CLIENT_ID=${TAILSCALE_CLIENT_ID:-${TS_CLIENT_ID:-}}
+      - TAILSCALE_CLIENT_SECRET=${TAILSCALE_CLIENT_SECRET:-${TS_CLIENT_SECRET:-}}
+      - TAILSCALE_TAILNET=${TAILSCALE_TAILNET:--}
+      - TAILSCALE_API_BASE_URL=${TAILSCALE_API_BASE_URL:-https://api.tailscale.com}
+      - PULL_DATA_CWD_PORT=${PULL_DATA_CWD_PORT:-8080}
+      - PULL_DATA_HTTP_TIMEOUT_MS=${PULL_DATA_HTTP_TIMEOUT_MS:-5000}
+    volumes:
+      - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}
+      - ${HOME:-/root}/.ssh:/root/.ssh:ro
+      - ./scripts/pull-data.js:/opt/pull-data.js:ro
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        if command -v apk >/dev/null 2>&1; then
+          apk add --no-cache nodejs rsync openssh-client >/dev/null
+        fi
+        exec node /opt/pull-data.js
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      tailscale:
+        condition: service_started
+      pull-data:
+        condition: service_completed_successfully
+    network_mode: "host"
+    restart: unless-stopped
+    environment:
+      - HOST_CWD=${HOST_CWD:-${PWD}}
+      - MAIN_URL=${MAIN_URL:-localhost} # host or container_name: main-service
+      - MAIN_PORT=${MAIN_PORT:-3000}
+      - HOLD_URL=${HOLD_URL:-localhost} # host or container_name: hold-service
+      - HOLD_PORT=${HOLD_PORT:-4000}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        export RUNNER_START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        exec /docker-entrypoint.sh nginx -g 'daemon off;'
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    network_mode: "host"
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared-credentials.json:/etc/cloudflared/credentials.json:ro
+
+volumes:
+  tailscale-data:
+    driver: local
+  tailscale-socket:
+    driver: local
