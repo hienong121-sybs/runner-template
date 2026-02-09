@@ -17,7 +17,7 @@ trim() {
 HOST_CWD="${HOST_CWD:-}"
 PULL_DATA_SYNC_DIRS="${PULL_DATA_SYNC_DIRS:-.pocketbase}"
 
-TAILSCALE_SOCKET="/var/run/tailscale/tailscaled.sock"
+TAILSCALE_SOCKET="${TAILSCALE_SOCKET:-/var/run/tailscale/tailscaled.sock}"
 TAILSCALE_STATUS_WAIT_SECONDS="30"
 CWD_PORT="8080"
 TMP_DIR="/tmp/pull-data"
@@ -56,6 +56,9 @@ done
 
 if [ "$status_wait_count" -ge "$TAILSCALE_STATUS_WAIT_SECONDS" ]; then
   warn "tailscale status is unavailable after ${TAILSCALE_STATUS_WAIT_SECONDS}s"
+  if [ -s "$TMP_DIR/tailscale-status.err" ]; then
+    warn "tailscale error: $(head -n 1 "$TMP_DIR/tailscale-status.err")"
+  fi
   exit 0
 fi
 

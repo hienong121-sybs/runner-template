@@ -11,6 +11,7 @@ services:
       - TS_AUTHKEY=${TAILSCALE_CLIENT_SECRET}
       - TS_USERSPACE=false
       - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SOCKET=/var/run/tailscale/tailscaled.sock
       - TS_EXTRA_ARGS=--advertise-tags=${TAILSCALE_TAGS:-tag:ci} --accept-dns=true --accept-routes
     volumes:
       - tailscale-data:/var/lib/tailscale
@@ -31,6 +32,7 @@ services:
     environment:
       - HOST_CWD=${HOST_CWD:-${PWD}}
       - PULL_DATA_SYNC_DIRS=${PULL_DATA_SYNC_DIRS:-.pocketbase}
+      - TAILSCALE_SOCKET=/var/run/tailscale/tailscaled.sock
     volumes:
       - tailscale-socket:/var/run/tailscale
       - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}
