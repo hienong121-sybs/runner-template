@@ -18,6 +18,7 @@ HOST_CWD="${HOST_CWD:-}"
 PULL_DATA_SYNC_DIRS="${PULL_DATA_SYNC_DIRS:-.pocketbase}"
 
 TAILSCALE_SOCKET="/var/run/tailscale/tailscaled.sock"
+TAILSCALE_STATUS_WAIT_SECONDS="30"
 CWD_PORT="8080"
 TMP_DIR="/tmp/pull-data"
 STATUS_JSON_FILE="$TMP_DIR/tailscale-status.json"
@@ -39,8 +40,22 @@ for cmd in tailscale jq curl rsync ssh; do
   fi
 done
 
-if ! tailscale --socket "$TAILSCALE_SOCKET" status --json >"$STATUS_JSON_FILE" 2>"$TMP_DIR/tailscale-status.err"; then
-  warn "tailscale status is unavailable"
+check_tailscale_status() {
+  tailscale --socket "$TAILSCALE_SOCKET" status --json >"$STATUS_JSON_FILE" 2>"$TMP_DIR/tailscale-status.err"
+}
+
+status_wait_count=0
+while [ "$status_wait_count" -lt "$TAILSCALE_STATUS_WAIT_SECONDS" ]; do
+  if check_tailscale_status; then
+    log "tailscale status ready"
+    break
+  fi
+  status_wait_count=$((status_wait_count + 1))
+  sleep 1
+done
+
+if [ "$status_wait_count" -ge "$TAILSCALE_STATUS_WAIT_SECONDS" ]; then
+  warn "tailscale status is unavailable after ${TAILSCALE_STATUS_WAIT_SECONDS}s"
   exit 0
 fi
 
