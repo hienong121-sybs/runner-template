@@ -90,11 +90,18 @@ jobs:
           fi
 
           mkdir -p .pocketbase yml
-          printf 'created_at=%s\nrun_id=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_RUN_ID" > .pocketbase/pull-data-test.txt
-          printf 'kind: pull-data-test\ncreatedAt: %s\nrunId: "%s"\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_RUN_ID" > yml/pull-data-test.yml
+          created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          file_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          runner_tag="$(printf '%s' "${RUNNER_NAME:-unknown-runner}-$GITHUB_RUN_ID" | tr -c '[:alnum:]._-' '-')"
+          pb_file=".pocketbase/pull-data-test-${file_stamp}-${runner_tag}.txt"
+          yml_file="yml/pull-data-test-${file_stamp}-${runner_tag}.yml"
+
+          printf 'created_at=%s\nrun_id=%s\nrunner_name=%s\n' "$created_at" "$GITHUB_RUN_ID" "${RUNNER_NAME:-unknown-runner}" > "$pb_file"
+          printf 'kind: pull-data-test\ncreatedAt: %s\nrunId: "%s"\nrunnerName: "%s"\n' "$created_at" "$GITHUB_RUN_ID" "${RUNNER_NAME:-unknown-runner}" > "$yml_file"
 
           echo "PULL_DATA_SYNC_DIRS=$(grep '^PULL_DATA_SYNC_DIRS=' .env | cut -d= -f2-)"
-          ls -la .pocketbase yml
+          echo "created files:"
+          ls -la "$pb_file" "$yml_file"
 
       - name: runner-add-ssh
         run: |
