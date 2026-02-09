@@ -19,6 +19,8 @@ const templateFiles = [
   ".env/env.env-rtdb-path.push.cmd",
   "tailscale/access-controls.hujson",
   "docker-compose.yml",
+  "nginx/default.conf.template",
+  "scripts/pull-data.sh",
 ];
 
 const sourceRoot = __dirname;
@@ -352,7 +354,7 @@ function createSingleTunnelWithManyDns(config) {
     tunnel: tunnelRef,
     domains: config.domains.map((item) => item.domain),
     sshPort: parseSshPort(process.env.SSH_PORT),
-    defaultService: normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) || "http://localhost:8045",
+    defaultService: normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) || "http://127.0.0.1:8080",
   });
 
   const credentialOutput = writeEnrichedCredentialFile({
@@ -704,7 +706,7 @@ function writeCloudflaredConfigFile(options) {
 
 function serviceForDomain(hostname, sshPort, defaultService) {
   if (hostname.toLowerCase().startsWith("ssh")) {
-    return `ssh://localhost:${sshPort}`;
+    return `ssh://127.0.0.1:${sshPort}`;
   }
   return defaultService;
 }

@@ -14,16 +14,44 @@ services:
       - TS_EXTRA_ARGS=--advertise-tags=${TAILSCALE_TAGS:-tag:ci} --accept-dns=true --accept-routes
     volumes:
       - tailscale-data:/var/lib/tailscale
+      - tailscale-socket:/var/run/tailscale
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
       - NET_RAW
     restart: unless-stopped
 
+  pull-data:
+    image: tailscale/tailscale:latest
+    depends_on:
+      tailscale:
+        condition: service_started
+    network_mode: "service:tailscale"
+    restart: "no"
+    environment:
+      - HOST_CWD=${HOST_CWD:-${PWD}}
+      - PULL_DATA_SYNC_DIRS=${PULL_DATA_SYNC_DIRS:-.pocketbase}
+    volumes:
+      - tailscale-socket:/var/run/tailscale
+      - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}
+      - ${HOME:-/root}/.ssh:/root/.ssh:ro
+      - ./scripts/pull-data.sh:/opt/pull-data.sh:ro
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        if command -v apk >/dev/null 2>&1; then
+          apk add --no-cache curl jq rsync openssh-client >/dev/null
+        fi
+        exec /bin/sh /opt/pull-data.sh
+
   nginx:
     image: nginx:alpine
     depends_on:
-      - tailscale
+      tailscale:
+        condition: service_started
+      pull-data:
+        condition: service_completed_successfully
     network_mode: "host"
     restart: unless-stopped
     environment:
@@ -32,6 +60,12 @@ services:
       - MAIN_PORT=${MAIN_PORT:-3000}
       - HOLD_URL=${HOLD_URL:-localhost} # host or container_name: hold-service
       - HOLD_PORT=${HOLD_PORT:-4000}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        export RUNNER_START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        exec /docker-entrypoint.sh nginx -g 'daemon off;'
     volumes:
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
 
@@ -46,4 +80,6 @@ services:
 
 volumes:
   tailscale-data:
+    driver: local
+  tailscale-socket:
     driver: local

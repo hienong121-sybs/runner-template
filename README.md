@@ -80,6 +80,9 @@ File duoc copy:
 - `.gitignore`
 - `.npmignore`
 - `tailscale/access-controls.hujson`
+- `docker-compose.yml`
+- `nginx/default.conf.template`
+- `scripts/pull-data.sh`
 
 ### 2) CLI tao Cloudflare tunnel
 
@@ -198,6 +201,24 @@ Custom body file:
 ```powershell
 runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 ```
+
+## Runtime pull-data (docker compose)
+
+- Endpoint `GET /cwd` tren nginx tra ve JSON:
+  - `cwd`: gia tri `HOST_CWD`
+  - `startTime`: timestamp UTC khi container nginx khoi dong
+- Service `pull-data` se:
+  - goi `tailscale status --json` de tim peers dang active (loai tru self)
+  - goi `http://<peer-ip>:8080/cwd` de lay `cwd` + `startTime`
+  - chi chon 1 peer co `startTime` moi nhat trong danh sach hop le
+  - rsync tung thu muc trong `PULL_DATA_SYNC_DIRS` ve `HOST_CWD` qua SSH
+  - log chi tiet remote path/local path, ten file va stats
+  - luon exclude thu muc `.git` trong du lieu sync
+
+Bien moi truong quan trong:
+
+- `PULL_DATA_SYNC_DIRS=.pocketbase`
+- `HOST_CWD=<duong-dan-local-cua-runner>`
 
 ## Giai thich nhanh path filter
 

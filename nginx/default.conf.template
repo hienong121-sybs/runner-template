@@ -5,10 +5,11 @@ upstream svr_backend_main {
 
 server {
   listen 8080;
+  listen [::]:8080;
 
   location = /cwd {
-    default_type text/plain;
-    return 200 "${HOST_CWD}";
+    default_type application/json;
+    return 200 '{"cwd":"${HOST_CWD}","startTime":"${RUNNER_START_TIME}"}';
   }
 
   location / {

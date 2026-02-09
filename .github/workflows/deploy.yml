@@ -81,6 +81,21 @@ jobs:
           dotenvrtdb -e .env --writefilebase64=./docker-compose.yml --var=DOCKER_COMPOSE_YML_BASE64
           # dotenvrtdb -e .env --writefileraw=./custom.json --var=CUSTOM_JSON
 
+      - name: prepare-pull-data-test
+        run: |
+          if grep -q '^PULL_DATA_SYNC_DIRS=' .env; then
+            sed -i 's/^PULL_DATA_SYNC_DIRS=.*/PULL_DATA_SYNC_DIRS=.pocketbase,yml/' .env
+          else
+            echo 'PULL_DATA_SYNC_DIRS=.pocketbase,yml' >> .env
+          fi
+
+          mkdir -p .pocketbase yml
+          printf 'created_at=%s\nrun_id=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_RUN_ID" > .pocketbase/pull-data-test.txt
+          printf 'kind: pull-data-test\ncreatedAt: %s\nrunId: "%s"\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_RUN_ID" > yml/pull-data-test.yml
+
+          echo "PULL_DATA_SYNC_DIRS=$(grep '^PULL_DATA_SYNC_DIRS=' .env | cut -d= -f2-)"
+          ls -la .pocketbase yml
+
       - name: runner-add-ssh
         run: |
           dotenvrtdb -e .env -- runner-add-ssh

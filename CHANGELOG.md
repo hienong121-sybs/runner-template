@@ -6,6 +6,26 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [0.8.0] - 2026-02-09
+
+### Added
+- Added `pull-data` runtime script: `scripts/pull-data.sh`:
+  - discovers active Tailscale peers (excluding self) via `tailscale status --json`
+  - fetches peer metadata from `/cwd`
+  - picks only the peer with the newest `startTime` and syncs via `rsync` over SSH by IP
+  - logs remote/local paths and transfer stats while excluding `.git` directories
+- Added new docker compose service `pull-data` with minimal env config.
+- Added minimal pull-data env keys in `.env.example`.
+- Included `nginx/default.conf.template` and `scripts/pull-data.sh` in template copy/publish outputs.
+
+### Changed
+- Updated `nginx/default.conf.template`:
+  - `/cwd` now returns JSON with `cwd` and `startTime` (container startup time)
+  - added IPv6 listen on port `8080`
+- Updated `docker-compose.yml`:
+  - shared Tailscale socket volume for pull-data access
+  - nginx now waits for pull-data completion before startup
+
 ## [0.7.0] - 2026-02-09
 
 ### Added
