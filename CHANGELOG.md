@@ -6,6 +6,38 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [0.7.0] - 2026-02-09
+
+### Added
+- Added new aggregate CLI `runner-template`:
+  - displays all available project CLIs in numbered order
+  - allows selecting command by menu input (`1`, `2`, `3`)
+  - supports direct selector invocation: `runner-template <selector> [args...]`
+- Updated npm bin mapping to publish `runner-template`.
+
+## [0.6.0] - 2026-02-09
+
+### Added
+- Added new CLI command `runner-template-tailscale` for updating Tailscale Access Controls (ACL):
+  - supports action aliases `access-controls` and `acl`
+  - validates auth env and body file before making API calls
+  - supports `--dry-run`, `--tailnet`, and `--body-file`
+- Added Tailscale API modules for extensibility:
+  - `tailscale/api-client.js` with generic request function
+  - auth support for both Basic and Bearer
+  - OAuth token helper (`/api/v2/oauth/token`) for fallback flows
+- Added separate ACL body config file:
+  - `tailscale/access-controls.hujson`
+  - included in `runner-template-copy` template file list
+
+### Changed
+- Updated `runner-template-copy.js` command routing to support Tailscale mode in addition to copy/create-tunnel modes.
+- Updated `package.json`:
+  - added new bin `runner-template-tailscale`
+  - included `tailscale/**/*` in publish files
+  - bumped package version to `0.6.0`
+- Updated `.env.example` and `README.md` with Tailscale ACL env vars and usage docs.
+
 ## [0.5.0] - 2026-02-08
 
 ### Changed

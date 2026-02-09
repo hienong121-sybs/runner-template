@@ -1,15 +1,20 @@
 {
   "name": "runner-template-copy",
-  "version": "0.5.0",
-  "description": "CLI tools to copy runner-template files and create Cloudflare tunnels from env",
+  "version": "0.7.0",
+  "description": "CLI tools to copy runner-template files, create Cloudflare tunnels, and update Tailscale access controls",
   "bin": {
+    "runner-template": "./runner-template.js",
     "runner-template-copy": "./runner-template-copy.js",
-    "runner-template-createtunnel": "./runner-template-createtunnel.js"
+    "runner-template-createtunnel": "./runner-template-createtunnel.js",
+    "runner-template-tailscale": "./runner-template-tailscale.js"
   },
   "license": "MIT",
   "files": [
+    "runner-template.js",
     "runner-template-copy.js",
     "runner-template-createtunnel.js",
+    "runner-template-tailscale.js",
+    "tailscale/**/*",
     "README.md"
   ]
 }

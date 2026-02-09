@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 const readline = require("readline");
 const { spawnSync } = require("child_process");
+const { runTailscaleCli } = require("./tailscale/acl-service");
 
 const templateFiles = [
   ".github/workflows/deploy.yml",
@@ -16,26 +17,35 @@ const templateFiles = [
   ".env/cloudflared-credentials.json",
   ".env/cloudflare-tunnel.cmd",
   ".env/env.env-rtdb-path.push.cmd",
+  "tailscale/access-controls.hujson",
   "docker-compose.yml",
 ];
 
 const sourceRoot = __dirname;
 const targetRoot = process.cwd();
-const COMMAND_MODE_SET = new Set(["create-tunnel", "createtunnel", "tunnel"]);
+const CREATE_TUNNEL_MODE_SET = new Set(["create-tunnel", "createtunnel", "tunnel"]);
+const TAILSCALE_MODE_SET = new Set(["tailscale", "acl", "access-controls"]);
 
 async function runCli(rawArgs, options = {}) {
   const args = Array.isArray(rawArgs) ? [...rawArgs] : [];
   const scriptName = (options.scriptName || path.basename(process.argv[1] || "")).toLowerCase();
   const firstArg = (args[0] || "").toLowerCase();
-  const modeFromArg = COMMAND_MODE_SET.has(firstArg);
-  const modeFromCommandName = scriptName.includes("createtunnel");
+  const createTunnelModeFromArg = CREATE_TUNNEL_MODE_SET.has(firstArg);
+  const createTunnelModeFromCommandName = scriptName.includes("createtunnel");
+  const tailscaleModeFromArg = TAILSCALE_MODE_SET.has(firstArg);
+  const tailscaleModeFromCommandName = scriptName.includes("tailscale");
 
-  if (modeFromArg) {
+  if (createTunnelModeFromArg || tailscaleModeFromArg) {
     args.shift();
   }
 
-  if (modeFromArg || modeFromCommandName) {
+  if (createTunnelModeFromArg || createTunnelModeFromCommandName) {
     await runCreateTunnelCli(args);
+    return;
+  }
+
+  if (tailscaleModeFromArg || tailscaleModeFromCommandName) {
+    await runTailscaleCli(args);
     return;
   }
 

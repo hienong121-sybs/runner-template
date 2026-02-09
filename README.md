@@ -6,6 +6,7 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
 - Azure Pipelines workflow: `.azure/deploy.yml`
 - Mau ignore cho runtime/secrets: `.gitignore`, `.npmignore`
 - Mau bien moi truong: `.env.example`
+- Mau Access Controls body cho Tailscale: `tailscale/access-controls.hujson`
 - Lich su version template: `CHANGELOG.md`
 - CLI copy template: `runner-template-copy.js`, `package.json`
 
@@ -37,14 +38,30 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
 
 ## CLI bang npm link
 
-Package nay co 2 CLI:
+Package nay co 4 CLI:
 
+- `runner-template`: CLI tong hop, hien thi menu chon cac CLI con theo so thu tu.
 - `runner-template-copy`: copy nhanh file template vao cwd hien tai.
 - `runner-template-createtunnel`: tao Cloudflare tunnel + DNS record tu bien moi truong.
+- `runner-template-tailscale`: cap nhat Tailscale Access Controls (ACL) tu file hujson.
 
 1. Tai repo `runner-template`, tao global link:
    - `npm link`
 2. Sang repo dich (thu muc can thao tac), chay theo nhu cau.
+
+### 0) CLI tong hop (menu)
+
+- Chay menu:
+  - `runner-template`
+- CLI se hien thi danh sach cac command dang co:
+  - `1. runner-template-copy`
+  - `2. runner-template-createtunnel`
+  - `3. runner-template-tailscale`
+- Nhap so tuong ung de chay dung logic CLI da chon.
+- Co the chay truc tiep bang selector:
+  - `runner-template 1 --force`
+  - `runner-template 2 --yes`
+  - `runner-template 3 --dry-run`
 
 ### 1) CLI copy template
 
@@ -62,6 +79,7 @@ File duoc copy:
 - `.env.example`
 - `.gitignore`
 - `.npmignore`
+- `tailscale/access-controls.hujson`
 
 ### 2) CLI tao Cloudflare tunnel
 
@@ -134,6 +152,52 @@ Ve file credentials:
 Neu muon bo qua buoc confirm:
 
 - `runner-template-createtunnel --yes`
+
+### 3) CLI cap nhat Tailscale Access Controls
+
+Muc tieu:
+
+- Goi Tailscale API de cap nhat Access Controls (`/api/v2/tailnet/{tailnet}/acl`).
+- Tach body ACL ra file hujson rieng de thay doi rule ma khong sua code.
+- Co fallback auth:
+  - uu tien `TAILSCALE_ACCESS_TOKEN` neu co.
+  - neu token bi tu choi va co `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET`, CLI se xin OAuth token moi roi goi lai.
+  - neu khong co access token, CLI thu goi truc tiep bang client credentials; neu bi tu choi thi tu dong xin OAuth token.
+
+Env co the dung:
+
+- `TAILSCALE_CLIENT_ID` (hoac `TS_CLIENT_ID`)
+- `TAILSCALE_CLIENT_SECRET` (hoac `TS_CLIENT_SECRET`)
+- `TAILSCALE_ACCESS_TOKEN` (hoac `TS_ACCESS_TOKEN`)
+- `TAILSCALE_TAILNET` (mac dinh `-`)
+- `TAILSCALE_ACL_BODY_FILE` (mac dinh tu tim theo thu tu):
+  - `./tailscale/access-controls.hujson`
+  - `./tailscale-acl.hujson`
+  - file bundled trong package
+- `TAILSCALE_OAUTH_SCOPE` (optional)
+- `TAILSCALE_API_BASE_URL` (optional, mac dinh `https://api.tailscale.com`)
+- `TAILSCALE_API_TIMEOUT_MS` (optional, mac dinh `30000`)
+
+Lenh mau:
+
+```powershell
+$env:TAILSCALE_CLIENT_ID = "ts-client-id"
+$env:TAILSCALE_CLIENT_SECRET = "ts-client-secret"
+$env:TAILSCALE_TAILNET = "-"
+runner-template-tailscale
+```
+
+Dry run (chi validate env + file body, khong goi API):
+
+```powershell
+runner-template-tailscale --dry-run
+```
+
+Custom body file:
+
+```powershell
+runner-template-tailscale --body-file .\tailscale\access-controls.hujson
+```
 
 ## Giai thich nhanh path filter
 
