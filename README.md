@@ -128,8 +128,8 @@ File tao them:
   - `tunnel: <TunnelID>`
   - `credentials-file: /etc/cloudflared/credentials.json`
   - `ingress` theo tung domain
-  - domain bat dau bang `ssh` se map `ssh://localhost:${SSH_PORT}`
-  - domain khac map mac dinh `http://localhost:8045`
+  - domain bat dau bang `ssh` se map `ssh://127.0.0.1:${SSH_PORT}`
+  - domain khac map mac dinh `http://127.0.0.1:8080`
   - dong cuoi: `- service: http_status:404`
 
 Ve file credentials:
