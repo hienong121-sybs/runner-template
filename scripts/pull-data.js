@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
@@ -14,8 +15,8 @@ const CWD_PORT = normalizePositiveInt(process.env.PULL_DATA_CWD_PORT, 8080);
 const HTTP_TIMEOUT_MS = normalizePositiveInt(process.env.PULL_DATA_HTTP_TIMEOUT_MS, 5000);
 const SSH_PORT = normalizePositiveInt(process.env.PULL_DATA_SSH_PORT || process.env.SSH_PORT, 2222);
 const SSH_USER = normalizeEnv(process.env.PULL_DATA_SSH_USER);
-const USE_TAILSCALE_SSH = normalizeBool(process.env.PULL_DATA_USE_TAILSCALE_SSH, true);
-const TS_SOCKET = normalizeEnv(process.env.TS_SOCKET) || "/var/run/tailscale/tailscaled.sock";
+const SSH_PRIVATE_KEY_BASE64 = normalizeEnv(process.env.SSH_PULL_DATA_PRIVATE_KEY_BASE64 || process.env.PULL_DATA_SSH_PRIVATE_KEY_BASE64);
+const SSH_KNOWN_HOSTS_FILE = normalizeEnv(process.env.PULL_DATA_SSH_KNOWN_HOSTS_FILE);
 
 function log(message) {
   process.stdout.write(`[pull-data] ${message}\n`);
@@ -41,18 +42,8 @@ async function main() {
     return;
   }
 
-  if (!hasCommand("rsync")) {
-    warn("missing rsync binary");
-    return;
-  }
-
-  if (USE_TAILSCALE_SSH) {
-    if (!hasCommand("tailscale")) {
-      warn("missing tailscale binary");
-      return;
-    }
-  } else if (!hasCommand("ssh")) {
-    warn("missing ssh binary");
+  if (!hasCommand("ssh") || !hasCommand("rsync")) {
+    warn("missing ssh or rsync binary");
     return;
   }
 
@@ -75,13 +66,25 @@ async function main() {
     return;
   }
 
-  log(`selected ip=${selected.ip} startTime=${selected.startTime || "unknown"}`);
-  log(`remote cwd: ${selected.cwd}`);
-  log(`local cwd: ${HOST_CWD}`);
-  log(`transport: ${USE_TAILSCALE_SSH ? `tailscale-ssh (socket=${TS_SOCKET})` : `ssh (port=${SSH_PORT})`}`);
+  let sshContext;
+  try {
+    sshContext = createSshContext();
+  } catch (error) {
+    warn(error && error.message ? error.message : String(error));
+    return;
+  }
 
-  syncFromPeer(selected);
-  log("done");
+  try {
+    log(`selected ip=${selected.ip} startTime=${selected.startTime || "unknown"}`);
+    log(`remote cwd: ${selected.cwd}`);
+    log(`local cwd: ${HOST_CWD}`);
+    log(`transport: ssh (port=${SSH_PORT}, key=file, strictHostKeyChecking=accept-new)`);
+
+    syncFromPeer(selected, sshContext);
+    log("done");
+  } finally {
+    cleanupSshContext(sshContext);
+  }
 }
 
 async function fetchAccessToken() {
@@ -285,7 +288,7 @@ function parseTimestamp(value) {
   return -1;
 }
 
-function syncFromPeer(peer) {
+function syncFromPeer(peer, sshContext) {
   const dirs = splitSyncDirs(PULL_DATA_SYNC_DIRS);
   const remoteTarget = resolveSshTarget(peer);
   let index = 0;
@@ -307,7 +310,7 @@ function syncFromPeer(peer) {
     log(`  remote: ${remoteTarget}:${remotePath}/`);
     log(`  local:  ${localPath}/`);
 
-    const remoteCheck = remoteDirectoryExists(remoteTarget, remotePath);
+    const remoteCheck = remoteDirectoryExists(remoteTarget, remotePath, sshContext);
     if (!remoteCheck.exists) {
       if (remoteCheck.errorMessage) {
         warn(`remote check failed (${remoteTarget}): ${remoteCheck.errorMessage}`);
@@ -317,7 +320,7 @@ function syncFromPeer(peer) {
       continue;
     }
 
-    runRsync(remoteTarget, remotePath, localPath, dir);
+    runRsync(remoteTarget, remotePath, localPath, dir, sshContext);
   }
 }
 
@@ -327,17 +330,12 @@ function buildRemotePath(remoteCwd, dir) {
   return `${normalizedCwd}/${normalizedDir}`;
 }
 
-function remoteDirectoryExists(remoteTarget, remotePath) {
+function remoteDirectoryExists(remoteTarget, remotePath, sshContext) {
   const escapedRemotePath = shellSingleQuote(remotePath);
-  const result = USE_TAILSCALE_SSH
-    ? spawnSync("tailscale", [...tailscaleBaseArgs(), "ssh", remoteTarget, `test -d ${escapedRemotePath}`], {
-        stdio: "pipe",
-        encoding: "utf8",
-      })
-    : spawnSync("ssh", [...sshBaseArgs(), remoteTarget, `test -d ${escapedRemotePath}`], {
-        stdio: "pipe",
-        encoding: "utf8",
-      });
+  const result = spawnSync("ssh", [...sshBaseArgs(sshContext), remoteTarget, `test -d ${escapedRemotePath}`], {
+    stdio: "pipe",
+    encoding: "utf8",
+  });
   if (result.status === 0) {
     return { exists: true, errorMessage: "" };
   }
@@ -355,10 +353,8 @@ function remoteDirectoryExists(remoteTarget, remotePath) {
   };
 }
 
-function runRsync(remoteTarget, remotePath, localPath, dir) {
-  const rsyncRsh = USE_TAILSCALE_SSH
-    ? shellJoin(["tailscale", ...tailscaleBaseArgs(), "ssh"])
-    : shellJoin(["ssh", ...sshBaseArgs()]);
+function runRsync(remoteTarget, remotePath, localPath, dir, sshContext) {
+  const rsyncRsh = shellJoin(["ssh", ...sshBaseArgs(sshContext)]);
   const result = spawnSync(
     "rsync",
     [
@@ -406,27 +402,89 @@ function isSafeRelativePath(value) {
   return true;
 }
 
-function sshBaseArgs() {
+function createSshContext() {
+  if (!SSH_PRIVATE_KEY_BASE64) {
+    throw new Error("missing SSH_PULL_DATA_PRIVATE_KEY_BASE64");
+  }
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pull-data-ssh-"));
+  const privateKeyFile = path.join(tempDir, "id_ed25519_pull_data");
+  const knownHostsFile = SSH_KNOWN_HOSTS_FILE || path.join(tempDir, "known_hosts");
+  const privateKey = decodePrivateKeyFromBase64(SSH_PRIVATE_KEY_BASE64);
+
+  fs.writeFileSync(privateKeyFile, privateKey, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  fs.chmodSync(privateKeyFile, 0o600);
+
+  if (SSH_KNOWN_HOSTS_FILE) {
+    fs.mkdirSync(path.dirname(knownHostsFile), { recursive: true });
+    if (!fs.existsSync(knownHostsFile)) {
+      fs.writeFileSync(knownHostsFile, "", {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+    }
+  } else {
+    fs.writeFileSync(knownHostsFile, "", {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  }
+
+  return {
+    tempDir,
+    privateKeyFile,
+    knownHostsFile,
+  };
+}
+
+function cleanupSshContext(context) {
+  if (!context || !context.tempDir) {
+    return;
+  }
+
+  try {
+    fs.rmSync(context.tempDir, { recursive: true, force: true });
+  } catch (error) {
+    warn(`cannot remove temp ssh dir: ${error && error.message ? error.message : String(error)}`);
+  }
+}
+
+function decodePrivateKeyFromBase64(value) {
+  const compact = String(value || "").replace(/\s+/g, "");
+  const decoded = Buffer.from(compact, "base64").toString("utf8").replace(/\r\n/g, "\n").trim();
+
+  if (!decoded.includes("PRIVATE KEY")) {
+    throw new Error("SSH_PULL_DATA_PRIVATE_KEY_BASE64 is invalid");
+  }
+
+  return `${decoded}\n`;
+}
+
+function sshBaseArgs(sshContext) {
+  const keyFile = sshContext && sshContext.privateKeyFile ? sshContext.privateKeyFile : "";
+  const knownHostsFile = sshContext && sshContext.knownHostsFile ? sshContext.knownHostsFile : "/dev/null";
+
   return [
     "-p",
     String(SSH_PORT),
+    "-i",
+    keyFile,
     "-o",
-    "StrictHostKeyChecking=no",
+    "IdentitiesOnly=yes",
     "-o",
-    "UserKnownHostsFile=/dev/null",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    `UserKnownHostsFile=${knownHostsFile}`,
     "-o",
     "BatchMode=yes",
     "-o",
     "ConnectTimeout=8",
+    "-o",
+    "LogLevel=ERROR",
   ];
-}
-
-function tailscaleBaseArgs() {
-  const args = [];
-  if (TS_SOCKET) {
-    args.push("--socket", TS_SOCKET);
-  }
-  return args;
 }
 
 function resolveSshTarget(peer) {
@@ -489,23 +547,6 @@ function normalizePositiveInt(value, fallback) {
   if (Number.isInteger(parsed) && parsed > 0) {
     return parsed;
   }
-  return fallback;
-}
-
-function normalizeBool(value, fallback) {
-  const normalized = normalizeEnv(value).toLowerCase();
-  if (!normalized) {
-    return fallback;
-  }
-
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-
   return fallback;
 }
 
