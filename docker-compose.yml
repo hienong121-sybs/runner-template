@@ -5,7 +5,7 @@
 services:
   tailscale:
     image: tailscale/tailscale:latest
-    hostname: github-runner
+    hostname: ${USER:-local}-${GITHUB_RUN_ID:-${BUILD_BUILDID:-dev}}
     network_mode: "host"
     environment:
       - TS_AUTHKEY=${TAILSCALE_CLIENT_SECRET}
