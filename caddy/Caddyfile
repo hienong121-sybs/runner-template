@@ -1,4 +1,4 @@
-(common_routes) {
+(meta_routes) {
     @health path /healthz
     header @health Content-Type application/json
     respond @health "{\"status\":\"ok\"}" 200
@@ -6,7 +6,9 @@
     @cwd path /cwd
     header @cwd Content-Type application/json
     respond @cwd "{\"cwd\":\"{$HOST_CWD}\",\"startTime\":\"{$RUNNER_START_TIME}\"}" 200
+}
 
+(app_routes) {
     @files_root path /files
     redir @files_root /files/ 301
 
@@ -40,9 +42,21 @@
 }
 
 http://:8080 {
-    import common_routes
+    import meta_routes
+
+    @origin_https header X-Forwarded-Proto https
+    handle @origin_https {
+        import app_routes
+    }
+
+    # Direct HTTP access on :8080 is redirected to canonical HTTPS URL.
+    # Internal pull-data still uses /cwd and /healthz above.
+    handle {
+        redir https://{host}{uri} 308
+    }
 }
 
 {$CADDY_DOMAIN:localhost} {
-    import common_routes
+    import meta_routes
+    import app_routes
 }

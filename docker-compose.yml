@@ -65,9 +65,9 @@ services:
     restart: unless-stopped
     environment:
       - HOST_CWD=${HOST_CWD:-${PWD}}
-      - MAIN_URL=${MAIN_URL:-localhost} # host or container_name: main-service
+      - MAIN_URL=${MAIN_URL:-127.0.0.1} # host or container_name: main-service
       - MAIN_PORT=${MAIN_PORT:-3000}
-      - HOLD_URL=${HOLD_URL:-localhost} # host or container_name: hold-service
+      - HOLD_URL=${HOLD_URL:-127.0.0.1} # host or container_name: hold-service
       - HOLD_PORT=${HOLD_PORT:-4000}
       - CADDY_DOMAIN=${CADDY_DOMAIN:-localhost}
       - NGINX_AUTH_USER_00=${NGINX_AUTH_USER_00:-}
