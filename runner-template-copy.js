@@ -19,7 +19,6 @@ const templateFiles = [
   ".env/env.env-rtdb-path.push.cmd",
   ".bash/.bash_aliase",
   ".bash/setup-bash-aliase.sh",
-  "tailscale/access-controls.hujson",
   "docker-compose.yml",
   "nginx/default.conf.template",
   "nginx/setup-htpasswd.sh",
