@@ -17,9 +17,12 @@ const templateFiles = [
   ".env/cloudflared-credentials.json",
   ".env/cloudflare-tunnel.cmd",
   ".env/env.env-rtdb-path.push.cmd",
+  ".bash/.bash_aliase",
+  ".bash/setup-bash-aliase.sh",
   "tailscale/access-controls.hujson",
   "docker-compose.yml",
   "nginx/default.conf.template",
+  "nginx/setup-htpasswd.sh",
   "scripts/pull-data.js",
 ];
 

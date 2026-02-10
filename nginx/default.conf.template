@@ -18,6 +18,27 @@ server {
     autoindex_exact_size off;
     autoindex_localtime on;
     alias ${HOST_CWD}/;
+
+    # Thiết lập default type cho file không có extension
+    default_type text/plain;
+
+    # Thêm các dòng này để xem file trực tiếp trên browser
+    add_header Content-Disposition inline;
+    types {
+      text/plain txt log md env;
+      text/html html htm;
+      text/css css;
+      text/javascript js;
+      application/json json;
+      application/pdf pdf;
+      image/jpeg jpg jpeg;
+      image/png png;
+      image/gif gif;
+      image/svg+xml svg;
+      video/mp4 mp4;
+      video/webm webm;
+      audio/mpeg mp3;
+      audio/wav wav;
   }
 
   location = /cwd {

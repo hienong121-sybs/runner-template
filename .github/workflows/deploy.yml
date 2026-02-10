@@ -81,6 +81,16 @@ jobs:
           dotenvrtdb -e .env --writefilebase64=./docker-compose.yml --var=DOCKER_COMPOSE_YML_BASE64
           # dotenvrtdb -e .env --writefileraw=./custom.json --var=CUSTOM_JSON
 
+      - name: setup-bash-aliase
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          chmod +x ./.bash/setup-bash-aliase.sh
+          ./.bash/setup-bash-aliase.sh ./.env
+          source "$HOME/.bash/runner-alias.env"
+          source "$HOME/.bash/.bash_aliase"
+          r_help
+
       - name: prepare-pull-data-test
         run: |
           if grep -q '^PULL_DATA_SYNC_DIRS=' .env; then
@@ -121,3 +131,4 @@ jobs:
         run: |
           docker compose --env-file .env down -v
           # docker compose --env-file .env down
+
