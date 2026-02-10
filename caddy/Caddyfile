@@ -62,7 +62,18 @@ http://:8080 {
     }
 }
 
-{$CADDY_DOMAIN:localhost} {
+http://{$CADDY_DOMAIN:localhost} {
+    route {
+        import meta_routes
+
+        # Allow /cwd and /healthz over plain HTTP for legacy/internal callers.
+        handle {
+            redir https://{host}{uri} 308
+        }
+    }
+}
+
+https://{$CADDY_DOMAIN:localhost} {
     route {
         import meta_routes
         import app_routes
