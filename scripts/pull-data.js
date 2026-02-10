@@ -14,6 +14,8 @@ const CWD_PORT = normalizePositiveInt(process.env.PULL_DATA_CWD_PORT, 8080);
 const HTTP_TIMEOUT_MS = normalizePositiveInt(process.env.PULL_DATA_HTTP_TIMEOUT_MS, 5000);
 const SSH_PORT = normalizePositiveInt(process.env.PULL_DATA_SSH_PORT || process.env.SSH_PORT, 2222);
 const SSH_USER = normalizeEnv(process.env.PULL_DATA_SSH_USER);
+const USE_TAILSCALE_SSH = normalizeBool(process.env.PULL_DATA_USE_TAILSCALE_SSH, true);
+const TS_SOCKET = normalizeEnv(process.env.TS_SOCKET) || "/var/run/tailscale/tailscaled.sock";
 
 function log(message) {
   process.stdout.write(`[pull-data] ${message}\n`);
@@ -39,8 +41,18 @@ async function main() {
     return;
   }
 
-  if (!hasCommand("ssh") || !hasCommand("rsync")) {
-    warn("missing ssh or rsync binary");
+  if (!hasCommand("rsync")) {
+    warn("missing rsync binary");
+    return;
+  }
+
+  if (USE_TAILSCALE_SSH) {
+    if (!hasCommand("tailscale")) {
+      warn("missing tailscale binary");
+      return;
+    }
+  } else if (!hasCommand("ssh")) {
+    warn("missing ssh binary");
     return;
   }
 
@@ -66,7 +78,7 @@ async function main() {
   log(`selected ip=${selected.ip} startTime=${selected.startTime || "unknown"}`);
   log(`remote cwd: ${selected.cwd}`);
   log(`local cwd: ${HOST_CWD}`);
-  log(`ssh port: ${SSH_PORT}`);
+  log(`transport: ${USE_TAILSCALE_SSH ? `tailscale-ssh (socket=${TS_SOCKET})` : `ssh (port=${SSH_PORT})`}`);
 
   syncFromPeer(selected);
   log("done");
@@ -275,7 +287,7 @@ function parseTimestamp(value) {
 
 function syncFromPeer(peer) {
   const dirs = splitSyncDirs(PULL_DATA_SYNC_DIRS);
-  const sshTarget = resolveSshTarget(peer);
+  const remoteTarget = resolveSshTarget(peer);
   let index = 0;
 
   for (const dir of dirs) {
@@ -292,20 +304,20 @@ function syncFromPeer(peer) {
 
     log("");
     log(`[sync ${index}] ${dir}`);
-    log(`  remote: ${sshTarget}:${remotePath}/`);
+    log(`  remote: ${remoteTarget}:${remotePath}/`);
     log(`  local:  ${localPath}/`);
 
-    const remoteCheck = remoteDirectoryExists(sshTarget, remotePath);
+    const remoteCheck = remoteDirectoryExists(remoteTarget, remotePath);
     if (!remoteCheck.exists) {
       if (remoteCheck.errorMessage) {
-        warn(`ssh check failed (${sshTarget}): ${remoteCheck.errorMessage}`);
+        warn(`remote check failed (${remoteTarget}): ${remoteCheck.errorMessage}`);
       } else {
         warn(`remote path missing: ${remotePath}`);
       }
       continue;
     }
 
-    runRsync(sshTarget, remotePath, localPath, dir);
+    runRsync(remoteTarget, remotePath, localPath, dir);
   }
 }
 
@@ -315,12 +327,17 @@ function buildRemotePath(remoteCwd, dir) {
   return `${normalizedCwd}/${normalizedDir}`;
 }
 
-function remoteDirectoryExists(sshTarget, remotePath) {
+function remoteDirectoryExists(remoteTarget, remotePath) {
   const escapedRemotePath = shellSingleQuote(remotePath);
-  const result = spawnSync("ssh", [...sshBaseArgs(), sshTarget, `test -d ${escapedRemotePath}`], {
-    stdio: "pipe",
-    encoding: "utf8",
-  });
+  const result = USE_TAILSCALE_SSH
+    ? spawnSync("tailscale", [...tailscaleBaseArgs(), "ssh", remoteTarget, `test -d ${escapedRemotePath}`], {
+        stdio: "pipe",
+        encoding: "utf8",
+      })
+    : spawnSync("ssh", [...sshBaseArgs(), remoteTarget, `test -d ${escapedRemotePath}`], {
+        stdio: "pipe",
+        encoding: "utf8",
+      });
   if (result.status === 0) {
     return { exists: true, errorMessage: "" };
   }
@@ -338,8 +355,10 @@ function remoteDirectoryExists(sshTarget, remotePath) {
   };
 }
 
-function runRsync(sshTarget, remotePath, localPath, dir) {
-  const rsyncRsh = ["ssh", ...sshBaseArgs()].join(" ");
+function runRsync(remoteTarget, remotePath, localPath, dir) {
+  const rsyncRsh = USE_TAILSCALE_SSH
+    ? shellJoin(["tailscale", ...tailscaleBaseArgs(), "ssh"])
+    : shellJoin(["ssh", ...sshBaseArgs()]);
   const result = spawnSync(
     "rsync",
     [
@@ -348,7 +367,7 @@ function runRsync(sshTarget, remotePath, localPath, dir) {
       "--exclude=.git/",
       "--exclude=**/.git/",
       "--info=NAME,STATS2,PROGRESS2",
-      `${sshTarget}:${remotePath}/`,
+      `${remoteTarget}:${remotePath}/`,
       `${localPath}/`,
     ],
     {
@@ -400,6 +419,14 @@ function sshBaseArgs() {
     "-o",
     "ConnectTimeout=8",
   ];
+}
+
+function tailscaleBaseArgs() {
+  const args = [];
+  if (TS_SOCKET) {
+    args.push("--socket", TS_SOCKET);
+  }
+  return args;
 }
 
 function resolveSshTarget(peer) {
@@ -465,6 +492,23 @@ function normalizePositiveInt(value, fallback) {
   return fallback;
 }
 
+function normalizeBool(value, fallback) {
+  const normalized = normalizeEnv(value).toLowerCase();
+  if (!normalized) {
+    return fallback;
+  }
+
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+}
+
 function truncate(text, max = 240) {
   const normalized = String(text || "").replace(/\s+/g, " ").trim();
   if (normalized.length <= max) {
@@ -475,6 +519,18 @@ function truncate(text, max = 240) {
 
 function shellSingleQuote(value) {
   return `'${String(value || "").replace(/'/g, `'\\''`)}'`;
+}
+
+function shellJoin(values) {
+  return values.map(shellToken).join(" ");
+}
+
+function shellToken(value) {
+  const text = String(value || "");
+  if (/^[A-Za-z0-9_./:=+-]+$/.test(text)) {
+    return text;
+  }
+  return shellSingleQuote(text);
 }
 
 main().catch((error) => {
