@@ -1,0 +1,121 @@
+{
+  "lists": [
+    {
+      "id": "btn_mlc3wtlrtt06j",
+      "name": "cmd: files",
+      "buttons": [
+        {
+          "id": "btn_mlc3xrzldfdgw",
+          "label": "ls",
+          "command": "ls -a",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd00",
+          "label": "cat ./.env",
+          "command": "cat ./.env",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd01",
+          "label": "cd antigravity-manager",
+          "command": "cd /home/runner/work/antigravity-manager/antigravity-manager",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd02",
+          "label": "clear",
+          "command": "clear",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd03",
+          "label": "free -h",
+          "command": "free -h",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd04",
+          "label": "cd nginx-failover-hold-revert",
+          "command": "cd /home/runner/work/nginx-failover-hold-revert/nginx-failover-hold-revert",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_mlc3xrzldfd05",
+          "label": "cd runner-template",
+          "command": "cd /home/runner/work/runner-template/runner-template",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        }
+      ]
+    },
+    {
+      "id": "btn_mldi45pap7pvx",
+      "name": "dockers",
+      "buttons": [
+        {
+          "id": "btn_mlc3xrzldfd001",
+          "label": "docker-logs-f",
+          "command": "docker compose logs -f",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        }
+      ]
+    },
+    {
+      "id": "btn_common",
+      "name": "cmds",
+      "buttons": [
+        {
+          "id": "btn_common_r_help",
+          "label": "r_help",
+          "command": "r_help",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_common_r_cd",
+          "label": "r_cd",
+          "command": "r_cd",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_common_r_pwd",
+          "label": "r_pwd",
+          "command": "r_pwd",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_common_r_ls",
+          "label": "r_ls",
+          "command": "r_ls",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_common_r_dc_ps",
+          "label": "r_dc_ps",
+          "command": "r_dc_ps",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        },
+        {
+          "id": "btn_common_r_dc_logs",
+          "label": "r_dc_logs",
+          "command": "r_dc_logs",
+          "color": "#4a4a4a",
+          "sendEnter": true
+        }
+      ]
+    }
+  ],
+  "activeListId": "btn_mlc3wtlrtt06j"
+}
