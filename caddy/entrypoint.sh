@@ -3,6 +3,7 @@ set -eu
 
 auth_file="/etc/caddy/files-auth.caddy"
 tmp_file="${auth_file}.tmp"
+seen_users_file="${auth_file}.users.tmp"
 auth_enabled=0
 
 append_auth_user() {
@@ -23,6 +24,12 @@ append_auth_user() {
   fi
 
   if [ -n "$user" ] && [ -n "$pass" ]; then
+    if grep -Fxq -- "$user" "$seen_users_file"; then
+      echo "warning: skip duplicate username '${user}' for slot ${suffix}" >&2
+      return
+    fi
+    printf "%s\n" "$user" >> "$seen_users_file"
+
     hash="$(caddy hash-password --plaintext "$pass")"
     if [ "$auth_enabled" -eq 0 ]; then
       printf "basicauth {\n" >> "$tmp_file"
@@ -38,6 +45,7 @@ append_auth_user() {
 }
 
 : > "$tmp_file"
+: > "$seen_users_file"
 append_auth_user "00"
 append_auth_user "01"
 
@@ -48,6 +56,7 @@ else
 fi
 
 mv "$tmp_file" "$auth_file"
+rm -f "$seen_users_file"
 
 export HOST_CWD="${HOST_CWD:-${PWD:-/workspace}}"
 export RUNNER_START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
