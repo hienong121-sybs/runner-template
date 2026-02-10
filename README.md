@@ -81,7 +81,8 @@ File duoc copy:
 - `.npmignore`
 - `tailscale/access-controls.hujson`
 - `docker-compose.yml`
-- `nginx/default.conf.template`
+- `caddy/Caddyfile`
+- `caddy/entrypoint.sh`
 - `scripts/pull-data.js`
 
 ### 2) CLI tao Cloudflare tunnel
@@ -204,9 +205,11 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 
 ## Runtime pull-data (docker compose)
 
-- Endpoint `GET /cwd` tren nginx tra ve JSON:
+- Endpoint `GET /cwd` tren caddy tra ve JSON:
   - `cwd`: gia tri `HOST_CWD`
-  - `startTime`: timestamp UTC khi container nginx khoi dong
+  - `startTime`: timestamp UTC khi container caddy khoi dong
+- Endpoint `GET /healthz` tren caddy tra ve:
+  - `{"status":"ok"}`
 - Service `pull-data` se:
   - tu tao OAuth access token tu `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET`
   - goi Tailscale API `/api/v2/tailnet/{tailnet}/devices` de lay danh sach may dang active + IPv4
@@ -220,6 +223,7 @@ Bien moi truong quan trong:
 
 - `PULL_DATA_SYNC_DIRS=.pocketbase`
 - `HOST_CWD=<duong-dan-local-cua-runner>`
+- `CADDY_DOMAIN=<domain-public-de-caddy-tu-cap-ssl>`
 - `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 

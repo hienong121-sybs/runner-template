@@ -54,8 +54,8 @@ services:
         fi
         exec node /opt/pull-data.js
 
-  nginx:
-    image: nginx:alpine
+  caddy:
+    image: caddy:2-alpine
     depends_on:
       tailscale:
         condition: service_started
@@ -69,6 +69,7 @@ services:
       - MAIN_PORT=${MAIN_PORT:-3000}
       - HOLD_URL=${HOLD_URL:-localhost} # host or container_name: hold-service
       - HOLD_PORT=${HOLD_PORT:-4000}
+      - CADDY_DOMAIN=${CADDY_DOMAIN:-localhost}
       - NGINX_AUTH_USER_00=${NGINX_AUTH_USER_00:-}
       - NGINX_AUTH_PASS_00=${NGINX_AUTH_PASS_00:-}
       - NGINX_AUTH_USER_01=${NGINX_AUTH_USER_01:-}
@@ -77,13 +78,13 @@ services:
       - /bin/sh
       - -ec
       - |
-        sh /opt/nginx/setup-htpasswd.sh
-        export RUNNER_START_TIME="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        exec /docker-entrypoint.sh nginx -g 'daemon off;'
+        sh /opt/caddy/entrypoint.sh
     volumes:
       - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}:ro
-      - ./nginx/setup-htpasswd.sh:/opt/nginx/setup-htpasswd.sh:ro
-      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/entrypoint.sh:/opt/caddy/entrypoint.sh:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -98,4 +99,8 @@ volumes:
   tailscale-data:
     driver: local
   tailscale-socket:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
     driver: local

@@ -1,0 +1,48 @@
+(common_routes) {
+    @health path /healthz
+    header @health Content-Type application/json
+    respond @health "{\"status\":\"ok\"}" 200
+
+    @cwd path /cwd
+    header @cwd Content-Type application/json
+    respond @cwd "{\"cwd\":\"{$HOST_CWD}\",\"startTime\":\"{$RUNNER_START_TIME}\"}" 200
+
+    @files_root path /files
+    redir @files_root /files/ 301
+
+    @files path /files/*
+    handle @files {
+        import /etc/caddy/files-auth.caddy
+        uri strip_prefix /files
+        root * {$HOST_CWD}
+        header Content-Disposition "inline"
+        file_server browse
+    }
+
+    handle {
+        reverse_proxy {$MAIN_URL:localhost}:{$MAIN_PORT:3000} {$HOLD_URL:localhost}:{$HOLD_PORT:4000} {
+            lb_policy first
+            lb_try_duration 2s
+            fail_duration 1s
+
+            header_up Host {host}
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto {scheme}
+
+            transport http {
+                dial_timeout 1s
+                read_timeout 3600s
+                write_timeout 3600s
+                response_header_timeout 3600s
+            }
+        }
+    }
+}
+
+http://:8080 {
+    import common_routes
+}
+
+{$CADDY_DOMAIN:localhost} {
+    import common_routes
+}

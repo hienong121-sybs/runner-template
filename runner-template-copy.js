@@ -20,8 +20,8 @@ const templateFiles = [
   ".bash/.bash_aliase",
   ".bash/setup-bash-aliase.sh",
   "docker-compose.yml",
-  "nginx/default.conf.template",
-  "nginx/setup-htpasswd.sh",
+  "caddy/Caddyfile",
+  "caddy/entrypoint.sh",
   "scripts/pull-data.js",
 ];
 

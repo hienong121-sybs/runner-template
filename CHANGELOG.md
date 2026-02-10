@@ -6,6 +6,18 @@ This project follows:
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
+## [Unreleased]
+
+### Changed
+- Switched reverse proxy runtime in `docker-compose.yml` from `nginx` to `caddy` (`caddy:2-alpine`).
+- Replaced nginx template files in copy/publish lists with:
+  - `caddy/Caddyfile`
+  - `caddy/entrypoint.sh`
+- Added Caddy endpoints:
+  - `GET /cwd` for runner metadata (`cwd`, `startTime`)
+  - `GET /healthz` for basic health checks (`{"status":"ok"}`)
+- Added `CADDY_DOMAIN` env for automatic HTTPS hostname configuration.
+
 ## [0.8.1] - 2026-02-09
 
 ### Changed
