@@ -360,7 +360,7 @@ function createSingleTunnelWithManyDns(config) {
     tunnel: tunnelRef,
     domains: config.domains.map((item) => item.domain),
     sshPort: parseSshPort(process.env.SSH_PORT),
-    defaultService: normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) || "http://127.0.0.1:8080",
+    defaultService: normalizeEnvValue(process.env.CLOUDFLARED_DEFAULT_SERVICE) || "http://127.0.0.1:80",
   });
 
   const credentialOutput = writeEnrichedCredentialFile({

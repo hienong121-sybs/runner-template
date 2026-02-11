@@ -136,7 +136,7 @@ File tao them:
   - `credentials-file: /etc/cloudflared/credentials.json`
   - `ingress` theo tung domain
   - domain bat dau bang `ssh` se map `ssh://127.0.0.1:${SSH_PORT}`
-  - domain khac map mac dinh `http://127.0.0.1:8080`
+  - domain khac map mac dinh `http://127.0.0.1:80`
   - dong cuoi: `- service: http_status:404`
 
 Ve file credentials:

@@ -23,6 +23,7 @@ This project follows:
   - renders nginx template by env
   - disables mirror automatically when target equals current DNS
 - Added shared resolver bootstrap script `scripts/setup-resolver.sh` and mounted it into `pull-data`, `nginx`, `caddy` so MagicDNS can be used without `dns` compose option on host/service network modes.
+- Updated `runner-template-createtunnel` default non-SSH ingress service from `http://127.0.0.1:8080` to `http://127.0.0.1:80` so public hostname traffic reaches Caddy first (required for ACME HTTP challenge).
 - Added mirror env model:
   - `MIRROR_ENABLED`
   - `MIRROR_TARGET_DNS` (fallback to `TAILSCALE_DNS_NEXTHOUR`)
