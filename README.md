@@ -236,10 +236,16 @@ Bien moi truong quan trong:
 - `HOST_CWD=<duong-dan-local-cua-runner>`
 - `CADDY_DOMAIN=<domain-public-de-caddy-tu-cap-ssl>`
 - `MAIN_URL=<upstream chinh>`
+- `MAIN_TARGET_DNS=<override DNS cho upstream chinh, mac dinh = MAIN_URL>`
+- `MAIN_TARGET_PORT=<override port cho upstream chinh, mac dinh = MAIN_PORT>`
 - `NGINX_PORT=8080`
 - `TAILSCALE_DNS_CURRENT=<node hien tai>`
 - `TAILSCALE_DNS_NEXTHOUR=<node mirror>`
 - `MIRROR_ENABLED=1`
+- `DNS_SETUP_ENABLED=1`
+- `DNS_NAMESERVER_PRIMARY=100.100.100.100`
+- `DNS_NAMESERVER_FALLBACK=1.1.1.1`
+- `DNS_SEARCH_DOMAIN=<tailnet dns optional>`
 - `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 

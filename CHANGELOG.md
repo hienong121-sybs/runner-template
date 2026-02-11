@@ -22,6 +22,7 @@ This project follows:
   - sets startup time for `/cwd`
   - renders nginx template by env
   - disables mirror automatically when target equals current DNS
+- Added shared resolver bootstrap script `scripts/setup-resolver.sh` and mounted it into `pull-data`, `nginx`, `caddy` so MagicDNS can be used without `dns` compose option on host/service network modes.
 - Added mirror env model:
   - `MIRROR_ENABLED`
   - `MIRROR_TARGET_DNS` (fallback to `TAILSCALE_DNS_NEXTHOUR`)

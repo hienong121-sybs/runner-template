@@ -26,6 +26,7 @@ const templateFiles = [
   "nginx/setup-htpasswd.sh",
   "nginx/entrypoint.sh",
   "scripts/pull-data.js",
+  "scripts/setup-resolver.sh",
 ];
 
 const sourceRoot = __dirname;
