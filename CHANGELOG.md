@@ -3,18 +3,20 @@
 All notable changes to `runner-template` are documented in this file.
 
 This project follows:
+
 - Semantic Versioning: https://semver.org
 - Keep a Changelog style: https://keepachangelog.com
 
 ## [Unreleased]
 
 ### Changed
+
 - Switched runtime topology to `Caddy (TLS gateway) -> Nginx (business proxy + mirror)`.
 - Updated `docker-compose.yml`:
   - added dedicated `nginx` service as primary HTTP runtime
   - removed `HOLD_URL`/`HOLD_PORT` fallback upstream from runtime path
   - kept `caddy` as automatic HTTPS layer proxying to nginx
-- Updated `nginx/default.conf.template`:
+- Updated `nginx/default.template.conf`:
   - keeps `/files`, `/cwd`, `/healthz` endpoints
   - primary upstream is now only `MAIN_URL:MAIN_PORT`
   - added one-way mirror subrequest flow with env gating
@@ -35,6 +37,7 @@ This project follows:
 ## [0.8.1] - 2026-02-09
 
 ### Changed
+
 - Switched runtime `pull-data` implementation from shell + local `tailscale status --json` to Node.js (`scripts/pull-data.js`) using Tailscale OAuth + Devices API.
 - Updated `docker-compose.yml` `pull-data` service to run `node /opt/pull-data.js` and pass Tailscale API auth env vars.
 - Updated template copy/publish lists to include `scripts/pull-data.js`.
@@ -43,6 +46,7 @@ This project follows:
 ## [0.8.0] - 2026-02-09
 
 ### Added
+
 - Added `pull-data` runtime script: `scripts/pull-data.sh`:
   - discovers active Tailscale peers (excluding self) via `tailscale status --json`
   - fetches peer metadata from `/cwd`
@@ -50,10 +54,11 @@ This project follows:
   - logs remote/local paths and transfer stats while excluding `.git` directories
 - Added new docker compose service `pull-data` with minimal env config.
 - Added minimal pull-data env keys in `.env.example`.
-- Included `nginx/default.conf.template` and `scripts/pull-data.sh` in template copy/publish outputs.
+- Included `nginx/default.template.conf` and `scripts/pull-data.sh` in template copy/publish outputs.
 
 ### Changed
-- Updated `nginx/default.conf.template`:
+
+- Updated `nginx/default.template.conf`:
   - `/cwd` now returns JSON with `cwd` and `startTime` (container startup time)
   - added IPv6 listen on port `8080`
 - Updated `docker-compose.yml`:
@@ -63,6 +68,7 @@ This project follows:
 ## [0.7.0] - 2026-02-09
 
 ### Added
+
 - Added new aggregate CLI `runner-template`:
   - displays all available project CLIs in numbered order
   - allows selecting command by menu input (`1`, `2`, `3`)
@@ -72,6 +78,7 @@ This project follows:
 ## [0.6.0] - 2026-02-09
 
 ### Added
+
 - Added new CLI command `runner-template-tailscale` for updating Tailscale Access Controls (ACL):
   - supports action aliases `access-controls` and `acl`
   - validates auth env and body file before making API calls
@@ -85,6 +92,7 @@ This project follows:
   - included in `runner-template-copy` template file list
 
 ### Changed
+
 - Updated `runner-template-copy.js` command routing to support Tailscale mode in addition to copy/create-tunnel modes.
 - Updated `package.json`:
   - added new bin `runner-template-tailscale`
@@ -95,6 +103,7 @@ This project follows:
 ## [0.5.0] - 2026-02-08
 
 ### Changed
+
 - Updated tunnel-name resolution priority:
   - use `CLOUDFLARED_TUNNEL_NAME` first (no suffix)
   - fallback to prefixed keys `CLOUDFLARED_TUNNEL_NAME_xx` when the non-prefixed key is missing
@@ -118,6 +127,7 @@ This project follows:
 ## [0.4.1] - 2026-02-08
 
 ### Changed
+
 - Updated `runner-template-createtunnel` behavior to use exactly one tunnel name with many DNS domains:
   - tunnel name is read from `CLOUDFLARED_TUNNEL_NAME` or `CLOUDFLARED_TUNNEL_NAME_xx`
   - domains are read from `CLOUDFLARED_TUNNEL_DOMAIN_xx`
@@ -130,6 +140,7 @@ This project follows:
 ## [0.4.0] - 2026-02-08
 
 ### Added
+
 - Added new CLI command `runner-template-createtunnel` (implemented in `runner-template-copy.js`) to:
   - scan env pairs `CLOUDFLARED_TUNNEL_NAME_xx` + `CLOUDFLARED_TUNNEL_DOMAIN_xx`
   - confirm total pairs before execution
@@ -146,6 +157,7 @@ This project follows:
 ## [0.3.0] - 2026-02-08
 
 ### Added
+
 - Added npm CLI package `runner-template-copy` with:
   - `package.json` (no dependencies)
   - `runner-template-copy.js` for copying template files into current directory
@@ -155,6 +167,7 @@ This project follows:
 ## [0.2.0] - 2026-02-08
 
 ### Added
+
 - Expanded GitHub Actions template with commentable options in `.github/workflows/deploy.yml`.
 - Added Azure Pipelines equivalent in `.azure/deploy.yml`.
 - Added usage documentation in `README.md`.
@@ -164,5 +177,6 @@ This project follows:
 ## [0.1.0] - 2026-02-08
 
 ### Added
+
 - Initial deploy template workflow for GitHub Actions.
 - Base `.gitignore` and `.npmignore` for secrets/runtime safety.

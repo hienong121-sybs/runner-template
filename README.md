@@ -83,7 +83,7 @@ File duoc copy:
 - `docker-compose.yml`
 - `caddy/Caddyfile`
 - `caddy/entrypoint.sh`
-- `nginx/default.conf.template`
+- `nginx/default.template.conf`
 - `nginx/setup-htpasswd.sh`
 - `nginx/entrypoint.sh`
 - `scripts/pull-data.js`
@@ -166,16 +166,14 @@ Muc tieu:
 
 - Goi Tailscale API de cap nhat Access Controls (`/api/v2/tailnet/{tailnet}/acl`).
 - Tach body ACL ra file hujson rieng de thay doi rule ma khong sua code.
-- Co fallback auth:
-  - uu tien `TAILSCALE_ACCESS_TOKEN` neu co.
-  - neu token bi tu choi va co `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET`, CLI se xin OAuth token moi roi goi lai.
-  - neu khong co access token, CLI thu goi truc tiep bang client credentials; neu bi tu choi thi tu dong xin OAuth token.
+- Auth mode:
+  - bat buoc `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET` (hoac alias `TS_CLIENT_ID` + `TS_CLIENT_SECRET`)
+  - CLI luon xin OAuth access token truoc, sau do moi goi API cap nhat ACL bang bearer token.
 
 Env co the dung:
 
 - `TAILSCALE_CLIENT_ID` (hoac `TS_CLIENT_ID`)
 - `TAILSCALE_CLIENT_SECRET` (hoac `TS_CLIENT_SECRET`)
-- `TAILSCALE_ACCESS_TOKEN` (hoac `TS_ACCESS_TOKEN`)
 - `TAILSCALE_TAILNET` (mac dinh `-`)
 - `TAILSCALE_ACL_BODY_FILE` (mac dinh tu tim theo thu tu):
   - `./tailscale/access-controls.hujson`
@@ -225,9 +223,12 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - log chi tiet remote path/local path, ten file va stats
   - luon exclude thu muc `.git` trong du lieu sync
 - Mirror runtime:
-  - Luong chinh proxy vao `MAIN_URL:MAIN_PORT`
-  - Mirror 1 chieu qua `MIRROR_TARGET_DNS` (fallback `TAILSCALE_DNS_NEXTHOUR`) cung `MIRROR_TARGET_PORT` (fallback `NGINX_PORT`)
-  - Tat/bat bang `MIRROR_ENABLED` (`1` bat, khac `1` la tat)
+  - Luong chinh proxy vao `MAIN_TARGET_DNS:MAIN_TARGET_PORT` (mac dinh `127.0.0.1:3000`)
+  - Mirror 1 chieu qua danh sach `NGINX_MIRROR_URL_PORT_xx` (vd `2026021114.tail8ee506.ts.net:8080`)
+  - Khong con fallback theo bien khac; mirror chi doc tu prefix `NGINX_MIRROR_URL_PORT_`
+  - Neu `NGINX_MIRROR_URL_PORT_00` rong va co du `DOTENVRTDB_NOW_YYYYDDMMHH` + `TAILSCALE_TAILNET_DNS`, entrypoint tu sinh `NGINX_MIRROR_URL_PORT_00=<nextHour>.TAILSCALE_TAILNET_DNS:NGINX_PORT`
+  - `docker-compose.yml` dang expose san cac slot `NGINX_MIRROR_URL_PORT_00..09`; can nhieu hon thi them tiep `..._10`, `..._11`, ...
+  - Tat/bat bang `NGINX_MIRROR_ENABLED` (`1` bat, khac `1` la tat)
   - Request mirror se tu gan header `X-Mirror-Request: 1` de tranh loop qua lai
 
 Bien moi truong quan trong:
@@ -235,17 +236,17 @@ Bien moi truong quan trong:
 - `PULL_DATA_SYNC_DIRS=.pocketbase`
 - `HOST_CWD=<duong-dan-local-cua-runner>`
 - TLS public duoc terminate boi Cloudflare Tunnel/Edge (khong can `CADDY_DOMAIN` cho ACME).
-- `MAIN_URL=<upstream chinh>`
-- `MAIN_TARGET_DNS=<override DNS cho upstream chinh, mac dinh = MAIN_URL>`
-- `MAIN_TARGET_PORT=<override port cho upstream chinh, mac dinh = MAIN_PORT>`
+- `MAIN_TARGET_DNS=<upstream chinh, mac dinh 127.0.0.1>`
+- `MAIN_TARGET_PORT=<upstream port chinh, mac dinh MAIN_PORT>`
 - `NGINX_PORT=8080`
 - `TAILSCALE_DNS_CURRENT=<node hien tai>`
 - `TAILSCALE_DNS_NEXTHOUR=<node mirror>`
-- `MIRROR_ENABLED=1`
-- `DNS_SETUP_ENABLED=1`
-- `DNS_NAMESERVER_PRIMARY=100.100.100.100`
-- `DNS_NAMESERVER_FALLBACK=1.1.1.1`
-- `DNS_SEARCH_DOMAIN=<tailnet dns optional>`
+- `NGINX_MIRROR_ENABLED=0`
+- `NGINX_MIRROR_URL_PORT_00=<mirror target uu tien cao nhat>`
+- `TAILSCALE_DNS_SETUP_ENABLED=1`
+- `TAILSCALE_DNS_NAMESERVER_PRIMARY=100.100.100.100`
+- `TAILSCALE_DNS_NAMESERVER_FALLBACK=1.1.1.1`
+- `TAILSCALE_DNS_SEARCH_DOMAIN=<tailnet dns optional>`
 - `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 

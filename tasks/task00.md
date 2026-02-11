@@ -1,6 +1,6 @@
 ### Task
 
-- Điều chỉnh `nginx\default.conf.template`, khi vào location /cwd sẽ trả về json như sau:
+- Điều chỉnh `nginx\default.template.conf`, khi vào location /cwd sẽ trả về json như sau:
 
 ```
 {

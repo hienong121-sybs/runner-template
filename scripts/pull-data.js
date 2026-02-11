@@ -7,8 +7,8 @@ const { spawnSync } = require("child_process");
 
 const HOST_CWD = normalizeEnv(process.env.HOST_CWD);
 const PULL_DATA_SYNC_DIRS = normalizeEnv(process.env.PULL_DATA_SYNC_DIRS) || ".pocketbase";
-const TAILSCALE_CLIENT_ID = normalizeEnv(process.env.TAILSCALE_CLIENT_ID) || normalizeEnv(process.env.TS_CLIENT_ID);
-const TAILSCALE_CLIENT_SECRET = normalizeEnv(process.env.TAILSCALE_CLIENT_SECRET) || normalizeEnv(process.env.TS_CLIENT_SECRET);
+const TAILSCALE_CLIENT_ID = normalizeEnv(process.env.TAILSCALE_CLIENT_ID) || normalizeEnv(process.env.TAILSCALE_CLIENT_ID);
+const TAILSCALE_CLIENT_SECRET = normalizeEnv(process.env.TAILSCALE_CLIENT_SECRET) || normalizeEnv(process.env.TAILSCALE_CLIENT_SECRET);
 const TAILSCALE_TAILNET = normalizeEnv(process.env.TAILSCALE_TAILNET) || "-";
 const TAILSCALE_API_BASE_URL = (normalizeEnv(process.env.TAILSCALE_API_BASE_URL) || "https://api.tailscale.com").replace(/\/+$/, "");
 const CWD_PORT = normalizePositiveInt(process.env.PULL_DATA_CWD_PORT, 8080);
@@ -325,8 +325,12 @@ function syncFromPeer(peer, sshContext) {
 }
 
 function buildRemotePath(remoteCwd, dir) {
-  const normalizedCwd = String(remoteCwd || "").replace(/\\/g, "/").replace(/\/+$/, "");
-  const normalizedDir = String(dir || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  const normalizedCwd = String(remoteCwd || "")
+    .replace(/\\/g, "/")
+    .replace(/\/+$/, "");
+  const normalizedDir = String(dir || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
   return `${normalizedCwd}/${normalizedDir}`;
 }
 
@@ -357,15 +361,7 @@ function runRsync(remoteTarget, remotePath, localPath, dir, sshContext) {
   const rsyncRsh = shellJoin(["ssh", ...sshBaseArgs(sshContext)]);
   const result = spawnSync(
     "rsync",
-    [
-      "-avh",
-      "--delete",
-      "--exclude=.git/",
-      "--exclude=**/.git/",
-      "--info=NAME,STATS2,PROGRESS2",
-      `${remoteTarget}:${remotePath}/`,
-      `${localPath}/`,
-    ],
+    ["-avh", "--delete", "--exclude=.git/", "--exclude=**/.git/", "--info=NAME,STATS2,PROGRESS2", `${remoteTarget}:${remotePath}/`, `${localPath}/`],
     {
       stdio: "inherit",
       encoding: "utf8",
@@ -551,7 +547,9 @@ function normalizePositiveInt(value, fallback) {
 }
 
 function truncate(text, max = 240) {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const normalized = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (normalized.length <= max) {
     return normalized;
   }

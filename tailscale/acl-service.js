@@ -39,8 +39,7 @@ async function runTailscaleCli(rawArgs) {
     }
     console.error("");
     console.error("required:");
-    console.error("- either TAILSCALE_ACCESS_TOKEN (or TS_ACCESS_TOKEN)");
-    console.error("- or TAILSCALE_CLIENT_ID + TAILSCALE_CLIENT_SECRET (TS_CLIENT_ID/TS_CLIENT_SECRET also supported)");
+    console.error("- TAILSCALE_CLIENT_ID + TAILSCALE_CLIENT_SECRET (or TS_CLIENT_ID + TS_CLIENT_SECRET)");
     process.exit(1);
   }
 
@@ -113,49 +112,9 @@ async function runTailscaleCli(rawArgs) {
 
 async function executeAccessControlsAction(context) {
   const { client, envConfig, tailnet, aclBody } = context;
-  const hasClientCredentials = Boolean(envConfig.clientId && envConfig.clientSecret);
-
-  if (envConfig.accessToken) {
-    console.log("");
-    console.log("apply acl: using env access token.");
-    try {
-      return await client.updateAccessControls({
-        tailnet,
-        aclBody,
-        auth: {
-          type: "bearer",
-          token: envConfig.accessToken,
-        },
-      });
-    } catch (error) {
-      if (isUnauthorized(error) && hasClientCredentials) {
-        console.log("warning: env access token was rejected, fallback to OAuth token from client credentials.");
-        return updateAclWithOAuthToken(client, envConfig, tailnet, aclBody);
-      }
-      throw error;
-    }
-  }
-
   console.log("");
-  console.log("apply acl: trying client credentials directly.");
-  try {
-    return await client.updateAccessControls({
-      tailnet,
-      aclBody,
-      auth: {
-        type: "basic",
-        clientId: envConfig.clientId,
-        clientSecret: envConfig.clientSecret,
-      },
-    });
-  } catch (error) {
-    if (!isUnauthorized(error)) {
-      throw error;
-    }
-
-    console.log("info: direct credentials were rejected, requesting OAuth access token.");
-    return updateAclWithOAuthToken(client, envConfig, tailnet, aclBody);
-  }
+  console.log("apply acl: requesting OAuth access token from client credentials.");
+  return updateAclWithOAuthToken(client, envConfig, tailnet, aclBody);
 }
 
 async function updateAclWithOAuthToken(client, envConfig, tailnet, aclBody) {
@@ -278,7 +237,6 @@ function collectEnvConfig(env) {
   return {
     clientId: firstNonEmpty([env.TAILSCALE_CLIENT_ID, env.TS_CLIENT_ID]),
     clientSecret: firstNonEmpty([env.TAILSCALE_CLIENT_SECRET, env.TS_CLIENT_SECRET]),
-    accessToken: firstNonEmpty([env.TAILSCALE_ACCESS_TOKEN, env.TS_ACCESS_TOKEN]),
     oauthScope: firstNonEmpty([env.TAILSCALE_OAUTH_SCOPE]),
     tailnet: firstNonEmpty([env.TAILSCALE_TAILNET]),
     aclBodyFile: firstNonEmpty([env.TAILSCALE_ACL_BODY_FILE]),
@@ -289,10 +247,6 @@ function collectEnvConfig(env) {
 
 function validateAuthConfig(config) {
   const errors = [];
-
-  if (config.accessToken) {
-    return errors;
-  }
 
   if (!config.clientId && !config.clientSecret) {
     errors.push("missing TAILSCALE_CLIENT_ID and TAILSCALE_CLIENT_SECRET");
@@ -324,10 +278,7 @@ function resolveAclBodyFile(explicitFile) {
     };
   }
 
-  const cwdCandidates = [
-    path.resolve(process.cwd(), "tailscale", DEFAULT_BODY_FILENAME),
-    path.resolve(process.cwd(), "tailscale-acl.hujson"),
-  ];
+  const cwdCandidates = [path.resolve(process.cwd(), "tailscale", DEFAULT_BODY_FILENAME), path.resolve(process.cwd(), "tailscale-acl.hujson")];
 
   for (const candidate of cwdCandidates) {
     if (isReadableFile(candidate)) {
@@ -348,14 +299,10 @@ function resolveAclBodyFile(explicitFile) {
 }
 
 function describeAuthMode(config) {
-  const modes = [];
-  if (config.accessToken) {
-    modes.push("bearer-token(env)");
-  }
   if (config.clientId && config.clientSecret) {
-    modes.push("client-credentials");
+    return "oauth-client-credentials";
   }
-  return modes.length > 0 ? modes.join(" + ") : "none";
+  return "none";
 }
 
 function normalizeAction(value) {
@@ -404,10 +351,6 @@ function truncate(text, maxLength = 320) {
   return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
-function isUnauthorized(error) {
-  return error instanceof TailscaleApiError && [401, 403].includes(error.statusCode);
-}
-
 function formatError(error) {
   if (error instanceof TailscaleApiError) {
     const summary = summarizeBody(error.responseBody);
@@ -441,8 +384,7 @@ function printHelp() {
   console.log("  --help, -h             Show this help");
   console.log("");
   console.log("Env auth priority:");
-  console.log("  1) TAILSCALE_ACCESS_TOKEN (or TS_ACCESS_TOKEN)");
-  console.log("  2) TAILSCALE_CLIENT_ID + TAILSCALE_CLIENT_SECRET (or TS_* aliases)");
+  console.log("  1) TAILSCALE_CLIENT_ID + TAILSCALE_CLIENT_SECRET (or TS_* aliases)");
 }
 
 module.exports = {

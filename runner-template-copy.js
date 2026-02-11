@@ -22,7 +22,7 @@ const templateFiles = [
   "docker-compose.yml",
   "caddy/Caddyfile",
   "caddy/entrypoint.sh",
-  "nginx/default.conf.template",
+  "nginx/default.template.conf",
   "nginx/setup-htpasswd.sh",
   "nginx/entrypoint.sh",
   "scripts/pull-data.js",
