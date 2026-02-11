@@ -24,7 +24,10 @@ This project follows:
   - sets startup time for `/cwd`
   - renders nginx template by env
   - disables mirror automatically when target equals current DNS
-- Added shared resolver bootstrap script `scripts/setup-resolver.sh` and mounted it into `pull-data`, `nginx`, `caddy` so MagicDNS can be used without `dns` compose option on host/service network modes.
+- Replaced old resolver bootstrap script flow with runner hooks:
+  - `scripts/setup-runner-prev.js`
+  - `scripts/setup-runner-after.js`
+  - shared helpers in `scripts/setup-runner-helper.js`
 - Updated `runner-template-createtunnel` default non-SSH ingress service from `http://127.0.0.1:8080` to `http://127.0.0.1:80` so public hostname traffic reaches Caddy first (required for ACME HTTP challenge).
 - Changed Caddy runtime to HTTP-only origin listener (`:80`) behind Cloudflare Tunnel and removed ACME/TLS issuance from Caddy flow.
 - Added mirror env model:

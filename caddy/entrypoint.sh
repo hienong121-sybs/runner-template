@@ -5,8 +5,6 @@ export CADDY_UPSTREAM_HOST="${CADDY_UPSTREAM_HOST:-127.0.0.1}"
 export CADDY_UPSTREAM_PORT="${CADDY_UPSTREAM_PORT:-8080}"
 export CADDY_RUNTIME_DIR="${CADDY_RUNTIME_DIR:-/opt/caddy/runtime}"
 
-sh /opt/common/setup-resolver.sh
-
 if mkdir -p "$CADDY_RUNTIME_DIR" 2>/dev/null; then
   runtime_env_file="$CADDY_RUNTIME_DIR/runtime.env"
   {

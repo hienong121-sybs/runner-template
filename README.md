@@ -87,6 +87,9 @@ File duoc copy:
 - `nginx/setup-htpasswd.sh`
 - `nginx/entrypoint.sh`
 - `scripts/pull-data.js`
+- `scripts/setup-runner-helper.js`
+- `scripts/setup-runner-prev.js`
+- `scripts/setup-runner-after.js`
 
 ### 2) CLI tao Cloudflare tunnel
 
@@ -243,7 +246,7 @@ Bien moi truong quan trong:
 - `TAILSCALE_DNS_NEXTHOUR=<node mirror>`
 - `NGINX_MIRROR_ENABLED=0`
 - `NGINX_MIRROR_URL_PORT_00=<mirror target uu tien cao nhat>`
-- `TAILSCALE_DNS_SETUP_ENABLED=1`
+- DNS host duoc setup trong workflow truoc `docker compose up`
 - `TAILSCALE_DNS_NAMESERVER_PRIMARY=100.100.100.100`
 - `TAILSCALE_DNS_NAMESERVER_FALLBACK=1.1.1.1`
 - `TAILSCALE_DNS_SEARCH_DOMAIN=<tailnet dns optional>`

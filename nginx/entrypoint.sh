@@ -306,8 +306,6 @@ fi
 
 rm -f "$mirror_targets_file"
 
-sh /opt/common/setup-resolver.sh
-
 sh /opt/nginx/setup-htpasswd.sh
 
 template_file="/etc/nginx/templates/default.template.conf"

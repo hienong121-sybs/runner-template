@@ -117,10 +117,18 @@ jobs:
         run: |
           dotenvrtdb -e .env -- runner-add-ssh
 
+      - name: setup-runner-prev
+        run: |
+          dotenvrtdb -e .env -- node ./scripts/setup-runner-prev.js
+
       - name: docker-started
         run: |
           docker compose --env-file .env up -d
           # docker compose --env-file .env -f docker-compose.prod.yml up -d
+
+      - name: setup-runner-after
+        run: |
+          dotenvrtdb -e .env -- node ./scripts/setup-runner-after.js
 
       - name: runner-keep-alive
         run: |
