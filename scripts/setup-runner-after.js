@@ -1,29 +1,227 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("fs");
 const helper = require("./setup-runner-helper");
+
+const normalizeTailnetDnsDomain = (rawValue) => {
+  let normalized = helper.normalizeValue(rawValue);
+  while (normalized.startsWith(".")) {
+    normalized = normalized.slice(1);
+  }
+  while (normalized.endsWith(".")) {
+    normalized = normalized.slice(0, -1);
+  }
+  if (!normalized) {
+    return "";
+  }
+  return normalized.endsWith(".ts.net") ? normalized : `${normalized}.ts.net`;
+};
+
+const normalizeDomainToken = (rawValue) => {
+  let normalized = helper.normalizeValue(rawValue);
+  while (normalized.startsWith("~")) {
+    normalized = normalized.slice(1);
+  }
+  while (normalized.startsWith(".")) {
+    normalized = normalized.slice(1);
+  }
+  if (!normalized) {
+    return "";
+  }
+  return `~${normalized}`;
+};
+
+const runResolvectlWithOptionalSudo = (args) => {
+  const command = `resolvectl ${args.join(" ")}`;
+
+  const runResultToError = (result) => {
+    const stderr = String(result.stderr || "").trim();
+    const stdout = String(result.stdout || "").trim();
+    return stderr || stdout || `exit ${result.status}`;
+  };
+
+  try {
+    const direct = helper.runCommand("resolvectl", args, { allowFailure: true });
+    if (direct.status === 0) {
+      return {
+        ok: true,
+        mode: "direct",
+        command,
+      };
+    }
+  } catch (error) {
+    void error;
+  }
+
+  try {
+    const sudoResult = helper.runCommand("sudo", ["-n", "resolvectl", ...args], { allowFailure: true });
+    if (sudoResult.status === 0) {
+      return {
+        ok: true,
+        mode: "sudo",
+        command: `sudo -n ${command}`,
+      };
+    }
+    return {
+      ok: false,
+      mode: "sudo",
+      command: `sudo -n ${command}`,
+      error: runResultToError(sudoResult),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      mode: "none",
+      command: `sudo -n ${command}`,
+      error: error && error.message ? error.message : String(error),
+    };
+  }
+};
+
+const readCurrentDomainTokens = (dnsInterface) => {
+  const parseTokens = (rawOutput) => {
+    const text = String(rawOutput || "").trim();
+    if (!text) {
+      return [];
+    }
+    const payload = text.includes(":") ? text.slice(text.indexOf(":") + 1) : text;
+    const tokens = [];
+    for (const candidate of payload.split(/\s+/)) {
+      const token = candidate.trim();
+      if (!token || !/^~?[A-Za-z0-9.-]+$/.test(token)) {
+        continue;
+      }
+      const normalized = normalizeDomainToken(token);
+      if (normalized && !tokens.includes(normalized)) {
+        tokens.push(normalized);
+      }
+    }
+    return tokens;
+  };
+
+  try {
+    const direct = helper.runCommand("resolvectl", ["domain", dnsInterface], { allowFailure: true });
+    if (direct.status === 0) {
+      return parseTokens(direct.stdout);
+    }
+  } catch (error) {
+    void error;
+  }
+
+  try {
+    const sudoResult = helper.runCommand("sudo", ["-n", "resolvectl", "domain", dnsInterface], { allowFailure: true });
+    if (sudoResult.status === 0) {
+      return parseTokens(sudoResult.stdout);
+    }
+  } catch (error) {
+    void error;
+  }
+
+  return [];
+};
+
+const interfaceExists = (dnsInterface) => fs.existsSync(`/sys/class/net/${dnsInterface}`);
 
 const executeMain = (async () => {
   try {
-    const step00_resolveDns = await (async () => {
-      const normalizeTailnetDnsDomain = (rawValue) => {
-        let normalized = helper.normalizeValue(rawValue);
-        while (normalized.startsWith(".")) {
-          normalized = normalized.slice(1);
+    const step00_configureResolver = (() => {
+      try {
+        const tailnetDnsDomain = normalizeTailnetDnsDomain(helper.readEnv("TAILSCALE_TAILNET_DNS", ""));
+        if (!tailnetDnsDomain) {
+          helper.logInfo("setup-runner-after", "step00_configureResolver skipped because TAILSCALE_TAILNET_DNS is empty");
+          return {
+            skipped: true,
+            reason: "tailnet_dns_empty",
+          };
         }
-        while (normalized.endsWith(".")) {
-          normalized = normalized.slice(0, -1);
+
+        if (!helper.isLinux()) {
+          helper.logInfo("setup-runner-after", "step00_configureResolver skipped: non-linux runtime");
+          return {
+            attempted: false,
+            applied: false,
+            reason: "non_linux_runtime",
+          };
         }
-        if (!normalized) {
-          return "";
+
+        const dnsInterface = helper.readEnv("DNS_INTERFACE", "tailscale0");
+        if (!interfaceExists(dnsInterface)) {
+          helper.logInfo("setup-runner-after", `step00_configureResolver deferred: interface '${dnsInterface}' not found yet`);
+          return {
+            attempted: false,
+            applied: false,
+            reason: "interface_not_found_yet",
+            dnsInterface,
+          };
         }
-        return normalized.endsWith(".ts.net") ? normalized : `${normalized}.ts.net`;
-      };
+
+        const dnsNameserverPrimary = helper.readEnv(
+          "DNS_NAMESERVER_PRIMARY",
+          helper.readEnv("TAILSCALE_DNS_NAMESERVER_PRIMARY", "100.100.100.100"),
+        ) || "100.100.100.100";
+
+        const desiredDomains = [];
+        const tsDomainToken = normalizeDomainToken("ts.net");
+        if (tsDomainToken) {
+          desiredDomains.push(tsDomainToken);
+        }
+        const tailnetDomainToken = normalizeDomainToken(tailnetDnsDomain);
+        if (tailnetDomainToken && !desiredDomains.includes(tailnetDomainToken)) {
+          desiredDomains.push(tailnetDomainToken);
+        }
+
+        const existingDomains = readCurrentDomainTokens(dnsInterface);
+        const mergedDomains = [...existingDomains];
+        for (const token of desiredDomains) {
+          if (!mergedDomains.includes(token)) {
+            mergedDomains.push(token);
+          }
+        }
+
+        const dnsResult = runResolvectlWithOptionalSudo(["dns", dnsInterface, dnsNameserverPrimary]);
+        const domainsToApply = mergedDomains.length > 0 ? mergedDomains : desiredDomains;
+        const domainResult = runResolvectlWithOptionalSudo(["domain", dnsInterface, ...domainsToApply]);
+        const applied = dnsResult.ok && domainResult.ok;
+
+        if (applied) {
+          helper.logInfo(
+            "setup-runner-after",
+            `step00_configureResolver ok: ${dnsResult.command} ; ${domainResult.command}`,
+          );
+        } else {
+          helper.logInfo(
+            "setup-runner-after",
+            `step00_configureResolver pending: dnsError=${dnsResult.error || "none"}, domainError=${domainResult.error || "none"}`,
+          );
+        }
+
+        return {
+          attempted: true,
+          applied,
+          dnsInterface,
+          tailnetDnsDomain,
+          dnsNameserverPrimary,
+          domains: domainsToApply,
+          desiredDomains,
+          existingDomains,
+          dnsCommand: dnsResult.command,
+          domainCommand: domainResult.command,
+          dnsError: dnsResult.error || null,
+          domainError: domainResult.error || null,
+        };
+      } catch (error) {
+        helper.logError("setup-runner-after", error, "step00_configureResolver failed");
+        throw error;
+      }
+    })();
+
+    const step01_resolveDns = await (async () => {
       try {
         const nowHourKey = helper.readEnv("DOTENVRTDB_NOW_YYYYDDMMHH", "");
         const tailnetDns = normalizeTailnetDnsDomain(helper.readEnv("TAILSCALE_TAILNET_DNS", ""));
         if (!nowHourKey || !tailnetDns) {
-          helper.logInfo("setup-runner-after", "step00_resolveDns skipped because DOTENVRTDB_NOW_YYYYDDMMHH or TAILSCALE_TAILNET_DNS is empty");
+          helper.logInfo("setup-runner-after", "step01_resolveDns skipped because DOTENVRTDB_NOW_YYYYDDMMHH or TAILSCALE_TAILNET_DNS is empty");
           return {
             skipped: true,
             reason: "missing_datetime_or_tailnet_dns",
@@ -42,7 +240,7 @@ const executeMain = (async () => {
           attempt += 1;
           try {
             if (helper.canResolveHost(probeHost)) {
-              helper.logInfo("setup-runner-after", `step00_resolveDns ok on attempt ${attempt}: ${probeHost}`);
+              helper.logInfo("setup-runner-after", `step01_resolveDns ok on attempt ${attempt}: ${probeHost}`);
               return {
                 probeHost,
                 attempt,
@@ -63,7 +261,7 @@ const executeMain = (async () => {
 
         helper.logInfo(
           "setup-runner-after",
-          `step00_resolveDns pending after ${timeoutSec}s (non-blocking): host=${probeHost}${lastError ? `, lastError=${lastError}` : ""}`,
+          `step01_resolveDns pending after ${timeoutSec}s (non-blocking): host=${probeHost}${lastError ? `, lastError=${lastError}` : ""}`,
         );
         return {
           probeHost,
@@ -73,12 +271,12 @@ const executeMain = (async () => {
           lastError: lastError || null,
         };
       } catch (error) {
-        helper.logError("setup-runner-after", error, "step00_resolveDns failed");
+        helper.logError("setup-runner-after", error, "step01_resolveDns failed");
         throw error;
       }
     })();
 
-    const step01_verifyNginxHealth = await (async () => {
+    const step02_verifyNginxHealth = await (async () => {
       try {
         const nginxPort = helper.readIntEnv("NGINX_PORT", 8080);
         const timeoutSec = helper.readIntEnv("RUNNER_AFTER_HEALTH_TIMEOUT_SEC", 45);
@@ -92,7 +290,7 @@ const executeMain = (async () => {
           try {
             const response = await helper.request(url, 3000);
             if (response.statusCode >= 200 && response.statusCode < 300) {
-              helper.logInfo("setup-runner-after", `step01_verifyNginxHealth ok on attempt ${attempt}: ${url}`);
+              helper.logInfo("setup-runner-after", `step02_verifyNginxHealth ok on attempt ${attempt}: ${url}`);
               return { url, attempt, statusCode: response.statusCode };
             }
             helper.logInfo("setup-runner-after", `health check attempt ${attempt} returned ${response.statusCode}`);
@@ -104,12 +302,12 @@ const executeMain = (async () => {
 
         throw new Error(`health check failed for ${url} after ${timeoutSec}s`);
       } catch (error) {
-        helper.logError("setup-runner-after", error, "step01_verifyNginxHealth failed");
+        helper.logError("setup-runner-after", error, "step02_verifyNginxHealth failed");
         throw error;
       }
     })();
 
-    const step02_showComposeStatus = (() => {
+    const step03_showComposeStatus = (() => {
       try {
         const envFilePath = helper.readEnv("RUNNER_ENV_FILE", ".env");
         const result = helper.runCommand("docker", ["compose", "--env-file", envFilePath, "ps"], {
@@ -126,35 +324,36 @@ const executeMain = (async () => {
         }
         return { status: result.status };
       } catch (error) {
-        helper.logError("setup-runner-after", error, "step02_showComposeStatus failed");
+        helper.logError("setup-runner-after", error, "step03_showComposeStatus failed");
         throw error;
       }
     })();
 
-    const step03_SumaryStep = (() => {
+    const step04_SumaryStep = (() => {
       try {
         const hasRuntimeSnapshot = Boolean(helper.readFileIfExists(".nginx/runtime.env"));
         helper.logInfo("setup-runner-after", `runtime snapshot found: ${hasRuntimeSnapshot ? "yes" : "no"}`);
         helper.logInfo(
           "setup-runner-after",
-          `summary: ${JSON.stringify({ step00_resolveDns, step01_verifyNginxHealth, step02_showComposeStatus })}`,
+          `summary: ${JSON.stringify({ step00_configureResolver, step01_resolveDns, step02_verifyNginxHealth, step03_showComposeStatus })}`,
         );
         return {
           success: true,
           hasRuntimeSnapshot,
-          totalSteps: 4,
+          totalSteps: 5,
         };
       } catch (error) {
-        helper.logError("setup-runner-after", error, "step03_SumaryStep failed");
+        helper.logError("setup-runner-after", error, "step04_SumaryStep failed");
         throw error;
       }
     })();
 
     return {
-      step00_resolveDns,
-      step01_verifyNginxHealth,
-      step02_showComposeStatus,
-      step03_SumaryStep,
+      step00_configureResolver,
+      step01_resolveDns,
+      step02_verifyNginxHealth,
+      step03_showComposeStatus,
+      step04_SumaryStep,
     };
   } catch (error) {
     helper.logError("setup-runner-after", error, "executeMain failed");

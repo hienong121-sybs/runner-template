@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("fs");
 const helper = require("./setup-runner-helper");
 
 const executeMain = (() => {
@@ -311,6 +312,15 @@ const executeMain = (() => {
               attempted: false,
               applied: false,
               reason: "non_linux_runtime",
+            };
+          }
+          if (!fs.existsSync(`/sys/class/net/${dnsInterface}`)) {
+            helper.logInfo("setup-runner-prev", `step01_resolveDns resolver config deferred: interface '${dnsInterface}' not found yet`);
+            return {
+              attempted: false,
+              applied: false,
+              reason: "interface_not_found_yet",
+              dnsInterface,
             };
           }
 
