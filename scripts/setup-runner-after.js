@@ -6,12 +6,30 @@ const helper = require("./setup-runner-helper");
 const executeMain = (async () => {
   try {
     const step00_resolveDns = await (async () => {
-      try {
-        const probeHost = helper.pickProbeHost();
-        if (!probeHost) {
-          helper.logInfo("setup-runner-after", "step00_resolveDns skipped because probe host is empty");
-          return { skipped: true };
+      const normalizeTailnetDnsDomain = (rawValue) => {
+        let normalized = helper.normalizeValue(rawValue);
+        while (normalized.startsWith(".")) {
+          normalized = normalized.slice(1);
         }
+        while (normalized.endsWith(".")) {
+          normalized = normalized.slice(0, -1);
+        }
+        if (!normalized) {
+          return "";
+        }
+        return normalized.endsWith(".ts.net") ? normalized : `${normalized}.ts.net`;
+      };
+      try {
+        const nowHourKey = helper.readEnv("DOTENVRTDB_NOW_YYYYDDMMHH", "");
+        const tailnetDns = normalizeTailnetDnsDomain(helper.readEnv("TAILSCALE_TAILNET_DNS", ""));
+        if (!nowHourKey || !tailnetDns) {
+          helper.logInfo("setup-runner-after", "step00_resolveDns skipped because DOTENVRTDB_NOW_YYYYDDMMHH or TAILSCALE_TAILNET_DNS is empty");
+          return {
+            skipped: true,
+            reason: "missing_datetime_or_tailnet_dns",
+          };
+        }
+        const probeHost = `${nowHourKey}.${tailnetDns}`;
 
         const timeoutSec = helper.readIntEnv("RUNNER_AFTER_DNS_TIMEOUT_SEC", 25);
         const intervalMs = helper.readIntEnv("RUNNER_AFTER_DNS_INTERVAL_MS", 2000);

@@ -12,6 +12,19 @@ const executeMain = (() => {
         process.env[key] = value;
         return helper.updateEnvFileValue(envFilePath, key, value);
       };
+      const normalizeTailnetDnsDomain = (rawValue) => {
+        let normalized = helper.normalizeValue(rawValue);
+        while (normalized.startsWith(".")) {
+          normalized = normalized.slice(1);
+        }
+        while (normalized.endsWith(".")) {
+          normalized = normalized.slice(0, -1);
+        }
+        if (!normalized) {
+          return "";
+        }
+        return normalized.endsWith(".ts.net") ? normalized : `${normalized}.ts.net`;
+      };
       const isValidPort = (value) => {
         const normalized = helper.normalizeValue(value);
         if (!/^\d+$/.test(normalized)) {
@@ -64,10 +77,7 @@ const executeMain = (() => {
         }
 
         const nowHourKey = helper.readEnv("DOTENVRTDB_NOW_YYYYDDMMHH", "");
-        let tailnetDns = helper.readEnv("TAILSCALE_TAILNET_DNS", "");
-        if (tailnetDns.startsWith(".")) {
-          tailnetDns = tailnetDns.slice(1);
-        }
+        const tailnetDns = normalizeTailnetDnsDomain(helper.readEnv("TAILSCALE_TAILNET_DNS", ""));
         if (!nowHourKey || !tailnetDns) {
           helper.logInfo(
             "setup-runner-prev",
@@ -139,6 +149,19 @@ const executeMain = (() => {
         }
         return `~${normalized}`;
       };
+      const normalizeTailnetDnsDomain = (rawValue) => {
+        let normalized = helper.normalizeValue(rawValue);
+        while (normalized.startsWith(".")) {
+          normalized = normalized.slice(1);
+        }
+        while (normalized.endsWith(".")) {
+          normalized = normalized.slice(0, -1);
+        }
+        if (!normalized) {
+          return "";
+        }
+        return normalized.endsWith(".ts.net") ? normalized : `${normalized}.ts.net`;
+      };
       const runResolvectlWithOptionalSudo = (args) => {
         const command = `resolvectl ${args.join(" ")}`;
 
@@ -186,22 +209,68 @@ const executeMain = (() => {
           };
         }
       };
+      const readCurrentDomainTokens = (dnsInterface) => {
+        const parseTokens = (rawOutput) => {
+          const text = String(rawOutput || "").trim();
+          if (!text) {
+            return [];
+          }
+          const payload = text.includes(":") ? text.slice(text.indexOf(":") + 1) : text;
+          const tokens = [];
+          for (const candidate of payload.split(/\s+/)) {
+            const token = candidate.trim();
+            if (!token || !/^~?[A-Za-z0-9.-]+$/.test(token)) {
+              continue;
+            }
+            const normalized = normalizeDomainToken(token);
+            if (normalized && !tokens.includes(normalized)) {
+              tokens.push(normalized);
+            }
+          }
+          return tokens;
+        };
+
+        try {
+          const direct = helper.runCommand("resolvectl", ["domain", dnsInterface], { allowFailure: true });
+          if (direct.status === 0) {
+            return parseTokens(direct.stdout);
+          }
+        } catch (error) {
+          void error;
+        }
+
+        try {
+          const sudoResult = helper.runCommand("sudo", ["-n", "resolvectl", "domain", dnsInterface], { allowFailure: true });
+          if (sudoResult.status === 0) {
+            return parseTokens(sudoResult.stdout);
+          }
+        } catch (error) {
+          void error;
+        }
+
+        return [];
+      };
 
       try {
-        const dnsNameserverPrimary = helper.normalizeValue(process.env.DNS_NAMESERVER_PRIMARY);
-        if (!dnsNameserverPrimary) {
-          helper.logInfo("setup-runner-prev", "step01_resolveDns skipped because DNS_NAMESERVER_PRIMARY is empty");
+        const tailnetDnsDomain = normalizeTailnetDnsDomain(helper.readEnv("TAILSCALE_TAILNET_DNS", ""));
+        if (!tailnetDnsDomain) {
+          helper.logInfo("setup-runner-prev", "step01_resolveDns skipped because TAILSCALE_TAILNET_DNS is empty");
           return {
             skipped: true,
-            reason: "dns_nameserver_primary_empty",
-            probeHost: null,
+            reason: "tailnet_dns_empty",
           };
         }
 
-        const dnsNameserverFallback = helper.normalizeValue(process.env.DNS_NAMESERVER_FALLBACK);
-        const dnsSearchDomainLegacy = helper.normalizeValue(process.env.DNS_SEARCH_DOMAIN);
+        const dnsNameserverPrimary = helper.readEnv(
+          "DNS_NAMESERVER_PRIMARY",
+          helper.readEnv("TAILSCALE_DNS_NAMESERVER_PRIMARY", "100.100.100.100"),
+        ) || "100.100.100.100";
+        const dnsNameserverFallback = helper.readEnv(
+          "DNS_NAMESERVER_FALLBACK",
+          helper.readEnv("TAILSCALE_DNS_NAMESERVER_FALLBACK", "1.1.1.1"),
+        );
+        const dnsSearchDomainLegacy = helper.readEnv("DNS_SEARCH_DOMAIN", tailnetDnsDomain);
         const dnsSetupEnabledLegacy = normalizeOnOff(process.env.DNS_SETUP_ENABLED, "");
-        const tailscaleTailnetDns = helper.readEnv("TAILSCALE_TAILNET_DNS", "");
 
         if (!helper.readEnv("TAILSCALE_DNS_NAMESERVER_PRIMARY", "")) {
           const envUpdated = persistEnvValue("TAILSCALE_DNS_NAMESERVER_PRIMARY", dnsNameserverPrimary);
@@ -217,7 +286,7 @@ const executeMain = (() => {
           }
         }
 
-        const dnsSearchDomain = helper.readEnv("TAILSCALE_DNS_SEARCH_DOMAIN", dnsSearchDomainLegacy || tailscaleTailnetDns);
+        const dnsSearchDomain = helper.readEnv("TAILSCALE_DNS_SEARCH_DOMAIN", dnsSearchDomainLegacy || tailnetDnsDomain);
         if (dnsSearchDomain && !helper.readEnv("TAILSCALE_DNS_SEARCH_DOMAIN", "")) {
           const envUpdated = persistEnvValue("TAILSCALE_DNS_SEARCH_DOMAIN", dnsSearchDomain);
           if (!envUpdated) {
@@ -236,15 +305,6 @@ const executeMain = (() => {
 
         const dnsInterface = helper.readEnv("DNS_INTERFACE", "tailscale0");
         const resolverApply = (() => {
-          if (dnsSetupEnabled !== "1") {
-            helper.logInfo("setup-runner-prev", "step01_resolveDns resolver config skipped: DNS setup disabled");
-            return {
-              attempted: false,
-              applied: false,
-              reason: "dns_setup_disabled",
-            };
-          }
-
           if (!helper.isLinux()) {
             helper.logInfo("setup-runner-prev", "step01_resolveDns resolver config skipped: non-linux runtime");
             return {
@@ -254,18 +314,30 @@ const executeMain = (() => {
             };
           }
 
-          const domainTokens = [];
+          const desiredDomainTokens = [];
           const tsDomainToken = normalizeDomainToken("ts.net");
           if (tsDomainToken) {
-            domainTokens.push(tsDomainToken);
+            desiredDomainTokens.push(tsDomainToken);
           }
-          const tailnetDomainToken = normalizeDomainToken(dnsSearchDomain || tailscaleTailnetDns);
-          if (tailnetDomainToken && !domainTokens.includes(tailnetDomainToken)) {
-            domainTokens.push(tailnetDomainToken);
+          const tailnetDomainToken = normalizeDomainToken(tailnetDnsDomain);
+          if (tailnetDomainToken && !desiredDomainTokens.includes(tailnetDomainToken)) {
+            desiredDomainTokens.push(tailnetDomainToken);
+          }
+
+          const existingDomainTokens = readCurrentDomainTokens(dnsInterface);
+          const mergedDomainTokens = [...existingDomainTokens];
+          for (const token of desiredDomainTokens) {
+            if (!mergedDomainTokens.includes(token)) {
+              mergedDomainTokens.push(token);
+            }
           }
 
           const dnsResult = runResolvectlWithOptionalSudo(["dns", dnsInterface, dnsNameserverPrimary]);
-          const domainResult = runResolvectlWithOptionalSudo(["domain", dnsInterface, ...domainTokens]);
+          const domainResult = runResolvectlWithOptionalSudo([
+            "domain",
+            dnsInterface,
+            ...(mergedDomainTokens.length > 0 ? mergedDomainTokens : desiredDomainTokens),
+          ]);
 
           const applied = dnsResult.ok && domainResult.ok;
           if (applied) {
@@ -284,41 +356,19 @@ const executeMain = (() => {
             attempted: true,
             applied,
             dnsInterface,
-            domains: domainTokens,
+            domains: mergedDomainTokens.length > 0 ? mergedDomainTokens : desiredDomainTokens,
+            desiredDomains: desiredDomainTokens,
+            existingDomains: existingDomainTokens,
             dnsCommand: dnsResult.command,
             domainCommand: domainResult.command,
             dnsError: dnsResult.error || null,
             domainError: domainResult.error || null,
           };
         })();
-
-        const probeHost = helper.pickProbeHost();
-        if (!probeHost) {
-          helper.logInfo("setup-runner-prev", "step01_resolveDns skipped because probe host candidate is empty");
-          return {
-            skipped: true,
-            reason: "probe_host_empty",
-            dnsNameserverPrimary,
-            probeHost: null,
-            resolverApply,
-          };
-        }
-
-        let canResolve = false;
-        let resolveError = "";
-        try {
-          canResolve = helper.canResolveHost(probeHost);
-        } catch (error) {
-          resolveError = error && error.message ? error.message : String(error);
-          helper.logInfo("setup-runner-prev", `step01_resolveDns pending: resolver probe command failed (${resolveError})`);
-        }
-        helper.logInfo("setup-runner-prev", `step01_resolveDns ${canResolve ? "ok" : "pending"}: probe host=${probeHost}`);
         return {
           skipped: false,
           dnsNameserverPrimary,
-          probeHost,
-          canResolve,
-          resolveError: resolveError || null,
+          tailnetDnsDomain,
           resolverApply,
         };
       } catch (error) {
