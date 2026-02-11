@@ -5,7 +5,7 @@ const helper = require("./setup-runner-helper");
 
 const executeMain = (async () => {
   try {
-    const step00_resolveDns = (() => {
+    const step00_resolveDns = await (async () => {
       try {
         const probeHost = helper.pickProbeHost();
         if (!probeHost) {
@@ -13,12 +13,47 @@ const executeMain = (async () => {
           return { skipped: true };
         }
 
-        if (!helper.canResolveHost(probeHost)) {
-          throw new Error(`cannot resolve host '${probeHost}'`);
+        const timeoutSec = helper.readIntEnv("RUNNER_AFTER_DNS_TIMEOUT_SEC", 25);
+        const intervalMs = helper.readIntEnv("RUNNER_AFTER_DNS_INTERVAL_MS", 2000);
+        const required = helper.readEnv("RUNNER_AFTER_DNS_REQUIRED", "0") === "1";
+        const deadline = Date.now() + timeoutSec * 1000;
+        let attempt = 0;
+        let lastError = "";
+
+        while (Date.now() <= deadline) {
+          attempt += 1;
+          try {
+            if (helper.canResolveHost(probeHost)) {
+              helper.logInfo("setup-runner-after", `step00_resolveDns ok on attempt ${attempt}: ${probeHost}`);
+              return {
+                probeHost,
+                attempt,
+                required,
+              };
+            }
+            helper.logInfo("setup-runner-after", `dns resolve attempt ${attempt} not ready: ${probeHost}`);
+          } catch (error) {
+            lastError = error && error.message ? error.message : String(error);
+            helper.logInfo("setup-runner-after", `dns resolve attempt ${attempt} command warning: ${lastError}`);
+          }
+          await helper.sleep(intervalMs);
         }
 
-        helper.logInfo("setup-runner-after", `step00_resolveDns ok: ${probeHost}`);
-        return { probeHost };
+        if (required) {
+          throw new Error(`cannot resolve host '${probeHost}' after ${timeoutSec}s`);
+        }
+
+        helper.logInfo(
+          "setup-runner-after",
+          `step00_resolveDns pending after ${timeoutSec}s (non-blocking): host=${probeHost}${lastError ? `, lastError=${lastError}` : ""}`,
+        );
+        return {
+          probeHost,
+          pending: true,
+          required,
+          timeoutSec,
+          lastError: lastError || null,
+        };
       } catch (error) {
         helper.logError("setup-runner-after", error, "step00_resolveDns failed");
         throw error;
