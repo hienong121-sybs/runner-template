@@ -229,7 +229,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - Luong chinh proxy vao `MAIN_TARGET_DNS:MAIN_TARGET_PORT` (mac dinh `127.0.0.1:3000`)
   - Mirror 1 chieu qua danh sach `NGINX_MIRROR_URL_PORT_xx` (vd `2026021114.tail8ee506.ts.net:8080`)
   - Khong con fallback theo bien khac; mirror chi doc tu prefix `NGINX_MIRROR_URL_PORT_`
-  - Neu `NGINX_MIRROR_URL_PORT_00` rong va co du `DOTENVRTDB_NOW_YYYYDDMMHH` + `TAILSCALE_TAILNET_DNS`, entrypoint tu sinh `NGINX_MIRROR_URL_PORT_00=<nextHour>.TAILSCALE_TAILNET_DNS:NGINX_PORT`
+  - Neu `NGINX_MIRROR_URL_PORT_00` rong va co du `DOTENVRTDB_NOW_YYYYDDMMHH` + `TAILSCALE_TAILNET_DNS`, `scripts/setup-runner-prev.js` se tu sinh `NGINX_MIRROR_URL_PORT_00=<nextHour>.TAILSCALE_TAILNET_DNS:NGINX_PORT` truoc khi `docker compose up`
   - `docker-compose.yml` dang expose san cac slot `NGINX_MIRROR_URL_PORT_00..09`; can nhieu hon thi them tiep `..._10`, `..._11`, ...
   - Tat/bat bang `NGINX_MIRROR_ENABLED` (`1` bat, khac `1` la tat)
   - Request mirror se tu gan header `X-Mirror-Request: 1` de tranh loop qua lai

@@ -27,118 +27,6 @@ is_valid_port() {
   return 0
 }
 
-is_leap_year() {
-  year="$1"
-  if [ $((year % 400)) -eq 0 ]; then
-    return 0
-  fi
-  if [ $((year % 100)) -eq 0 ]; then
-    return 1
-  fi
-  [ $((year % 4)) -eq 0 ]
-}
-
-days_in_month() {
-  year="$1"
-  month="$2"
-  case "$month" in
-    1|3|5|7|8|10|12)
-      printf '31'
-      ;;
-    4|6|9|11)
-      printf '30'
-      ;;
-    2)
-      if is_leap_year "$year"; then
-        printf '29'
-      else
-        printf '28'
-      fi
-      ;;
-    *)
-      printf '0'
-      ;;
-  esac
-}
-
-increment_yyyymmddhh() {
-  raw="$(normalize_value "${1:-}")"
-  case "$raw" in
-    [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9])
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-
-  year="${raw%??????}"
-  month_tmp="${raw#????}"
-  month="${month_tmp%????}"
-  day_tmp="${raw#??????}"
-  day="${day_tmp%??}"
-  hour="${raw#????????}"
-
-  year_num=$((10#$year))
-  month_num=$((10#$month))
-  day_num=$((10#$day))
-  hour_num=$((10#$hour))
-
-  if [ "$month_num" -lt 1 ] || [ "$month_num" -gt 12 ]; then
-    return 1
-  fi
-  month_days="$(days_in_month "$year_num" "$month_num")"
-  if [ "$day_num" -lt 1 ] || [ "$day_num" -gt "$month_days" ]; then
-    return 1
-  fi
-  if [ "$hour_num" -lt 0 ] || [ "$hour_num" -gt 23 ]; then
-    return 1
-  fi
-
-  hour_num=$((hour_num + 1))
-  if [ "$hour_num" -gt 23 ]; then
-    hour_num=0
-    day_num=$((day_num + 1))
-    if [ "$day_num" -gt "$month_days" ]; then
-      day_num=1
-      month_num=$((month_num + 1))
-      if [ "$month_num" -gt 12 ]; then
-        month_num=1
-        year_num=$((year_num + 1))
-      fi
-    fi
-  fi
-
-  printf '%04d%02d%02d%02d\n' "$year_num" "$month_num" "$day_num" "$hour_num"
-}
-
-populate_mirror_slot_00_from_datetime() {
-  current_slot_00="$(normalize_value "${NGINX_MIRROR_URL_PORT_00:-}")"
-  if [ -n "$current_slot_00" ]; then
-    return
-  fi
-
-  now_hour_key="$(normalize_value "${DOTENVRTDB_NOW_YYYYDDMMHH:-}")"
-  tailnet_dns="$(normalize_value "${TAILSCALE_TAILNET_DNS:-}")"
-  tailnet_dns="${tailnet_dns#.}"
-
-  if [ -z "$now_hour_key" ] || [ -z "$tailnet_dns" ]; then
-    return
-  fi
-
-  if ! next_hour_key="$(increment_yyyymmddhh "$now_hour_key")"; then
-    echo "warning: cannot derive NGINX_MIRROR_URL_PORT_00 from DOTENVRTDB_NOW_YYYYDDMMHH='${now_hour_key}'" >&2
-    return
-  fi
-
-  mirror_port="$(normalize_value "${NGINX_PORT:-8080}")"
-  if ! is_valid_port "$mirror_port"; then
-    mirror_port="8080"
-  fi
-
-  export NGINX_MIRROR_URL_PORT_00="${next_hour_key}.${tailnet_dns}:${mirror_port}"
-  echo "info: auto-set NGINX_MIRROR_URL_PORT_00=${NGINX_MIRROR_URL_PORT_00}" >&2
-}
-
 append_mirror_target() {
   raw_target="$(normalize_value "${1:-}")"
   if [ -z "$raw_target" ]; then
@@ -238,8 +126,6 @@ if [ "$NGINX_MIRROR_ENABLED" != "1" ]; then
   NGINX_MIRROR_ENABLED="0"
   export NGINX_MIRROR_ENABLED
 fi
-
-populate_mirror_slot_00_from_datetime
 
 mirror_targets_file="/tmp/nginx-mirror-targets.conf"
 mirror_directives_file="/etc/nginx/conf.d/mirror-directives.inc"

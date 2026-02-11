@@ -36,6 +36,8 @@ This project follows:
   - `MIRROR_TARGET_PORT` (fallback to `NGINX_PORT`)
   - removed `TAILSCALE_DNS_PREVHOUR` from template env files
 - Updated template copy/publish file lists to include nginx runtime files.
+- Moved auto-derive logic for `NGINX_MIRROR_URL_PORT_00` from `nginx/entrypoint.sh` to `scripts/setup-runner-prev.js` (runs before `docker compose up`).
+- Updated `scripts/setup-runner-prev.js` DNS step gate to use `DNS_NAMESERVER_PRIMARY` and sync legacy `DNS_*` vars to `TAILSCALE_DNS_*` keys when missing.
 
 ## [0.8.1] - 2026-02-09
 

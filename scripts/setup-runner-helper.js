@@ -148,6 +148,16 @@ module.exports = (() => {
       return false;
     }
 
+    let stats = null;
+    try {
+      stats = fs.statSync(filePath);
+    } catch {
+      return false;
+    }
+    if (!stats.isFile()) {
+      return false;
+    }
+
     const raw = fs.readFileSync(filePath, "utf8");
     const lines = raw.split(/\r?\n/);
     const prefix = `${key}=`;
