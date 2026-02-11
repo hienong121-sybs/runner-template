@@ -1,11 +1,18 @@
 upstream svr_backend_main {
   server ${MAIN_URL}:${MAIN_PORT} max_fails=1 fail_timeout=1s;
-  server ${HOLD_URL}:${HOLD_PORT} backup;
+  keepalive 32;
+}
+
+map $http_x_forwarded_proto $proxy_forwarded_proto {
+  default $http_x_forwarded_proto;
+  "" $scheme;
 }
 
 server {
-  listen 8080;
-  listen [::]:8080;
+  listen ${NGINX_PORT};
+  listen [::]:${NGINX_PORT};
+  resolver 100.100.100.100 1.1.1.1 valid=10s ipv6=off;
+  resolver_timeout 2s;
 
   location = /files {
     return 301 /files/;
@@ -47,21 +54,57 @@ server {
     return 200 '{"cwd":"${HOST_CWD}","startTime":"${RUNNER_START_TIME}"}';
   }
 
+  location = /healthz {
+    default_type application/json;
+    return 200 '{"status":"ok"}';
+  }
+
+  location = /_mirror_next {
+    internal;
+
+    set $mirror_enabled "${MIRROR_ENABLED}";
+    set $mirror_target_dns "${MIRROR_TARGET_DNS}";
+    set $mirror_target_port "${MIRROR_TARGET_PORT}";
+
+    if ($http_x_mirror_request = "1") {
+      return 204;
+    }
+    if ($mirror_enabled != "1") {
+      return 204;
+    }
+    if ($mirror_target_dns = "") {
+      return 204;
+    }
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $mirror_target_dns;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto http;
+    proxy_set_header X-Mirror-Request 1;
+    proxy_set_header Connection "";
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 15s;
+    proxy_send_timeout 15s;
+    proxy_pass http://$mirror_target_dns:$mirror_target_port$request_uri;
+  }
+
   location / {
+    mirror /_mirror_next;
+    mirror_request_body on;
+
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $proxy_forwarded_proto;
     proxy_set_header Connection "";
 
     proxy_connect_timeout 1s;
 
     proxy_read_timeout 3600s;
     proxy_send_timeout 3600s;
-
-    proxy_next_upstream error timeout http_502 http_503 http_504;
-    proxy_next_upstream_tries 2;
+    proxy_next_upstream off;
 
     proxy_pass http://svr_backend_main;
   }

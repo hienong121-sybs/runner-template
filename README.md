@@ -83,6 +83,9 @@ File duoc copy:
 - `docker-compose.yml`
 - `caddy/Caddyfile`
 - `caddy/entrypoint.sh`
+- `nginx/default.conf.template`
+- `nginx/setup-htpasswd.sh`
+- `nginx/entrypoint.sh`
 - `scripts/pull-data.js`
 
 ### 2) CLI tao Cloudflare tunnel
@@ -205,10 +208,13 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 
 ## Runtime pull-data (docker compose)
 
-- Endpoint `GET /cwd` tren caddy tra ve JSON:
+- Runtime proxy topology:
+  - Caddy: TLS gateway (`http` -> `https`, auto cert)
+  - Nginx: business proxy + mirror logic on plain HTTP (`:8080` mac dinh)
+- Endpoint `GET /cwd` tren nginx tra ve JSON:
   - `cwd`: gia tri `HOST_CWD`
-  - `startTime`: timestamp UTC khi container caddy khoi dong
-- Endpoint `GET /healthz` tren caddy tra ve:
+  - `startTime`: timestamp UTC khi container nginx khoi dong
+- Endpoint `GET /healthz` tren nginx tra ve:
   - `{"status":"ok"}`
 - Service `pull-data` se:
   - tu tao OAuth access token tu `TAILSCALE_CLIENT_ID` + `TAILSCALE_CLIENT_SECRET`
@@ -218,12 +224,22 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - rsync tung thu muc trong `PULL_DATA_SYNC_DIRS` ve `HOST_CWD` qua SSH
   - log chi tiet remote path/local path, ten file va stats
   - luon exclude thu muc `.git` trong du lieu sync
+- Mirror runtime:
+  - Luong chinh proxy vao `MAIN_URL:MAIN_PORT`
+  - Mirror 1 chieu qua `MIRROR_TARGET_DNS` (fallback `TAILSCALE_DNS_NEXTHOUR`) cung `MIRROR_TARGET_PORT` (fallback `NGINX_PORT`)
+  - Tat/bat bang `MIRROR_ENABLED` (`1` bat, khac `1` la tat)
+  - Request mirror se tu gan header `X-Mirror-Request: 1` de tranh loop qua lai
 
 Bien moi truong quan trong:
 
 - `PULL_DATA_SYNC_DIRS=.pocketbase`
 - `HOST_CWD=<duong-dan-local-cua-runner>`
 - `CADDY_DOMAIN=<domain-public-de-caddy-tu-cap-ssl>`
+- `MAIN_URL=<upstream chinh>`
+- `NGINX_PORT=8080`
+- `TAILSCALE_DNS_CURRENT=<node hien tai>`
+- `TAILSCALE_DNS_NEXTHOUR=<node mirror>`
+- `MIRROR_ENABLED=1`
 - `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 

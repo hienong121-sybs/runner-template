@@ -9,14 +9,25 @@ This project follows:
 ## [Unreleased]
 
 ### Changed
-- Switched reverse proxy runtime in `docker-compose.yml` from `nginx` to `caddy` (`caddy:2-alpine`).
-- Replaced nginx template files in copy/publish lists with:
-  - `caddy/Caddyfile`
-  - `caddy/entrypoint.sh`
-- Added Caddy endpoints:
-  - `GET /cwd` for runner metadata (`cwd`, `startTime`)
-  - `GET /healthz` for basic health checks (`{"status":"ok"}`)
-- Added `CADDY_DOMAIN` env for automatic HTTPS hostname configuration.
+- Switched runtime topology to `Caddy (TLS gateway) -> Nginx (business proxy + mirror)`.
+- Updated `docker-compose.yml`:
+  - added dedicated `nginx` service as primary HTTP runtime
+  - removed `HOLD_URL`/`HOLD_PORT` fallback upstream from runtime path
+  - kept `caddy` as automatic HTTPS layer proxying to nginx
+- Updated `nginx/default.conf.template`:
+  - keeps `/files`, `/cwd`, `/healthz` endpoints
+  - primary upstream is now only `MAIN_URL:MAIN_PORT`
+  - added one-way mirror subrequest flow with env gating
+- Added `nginx/entrypoint.sh`:
+  - sets startup time for `/cwd`
+  - renders nginx template by env
+  - disables mirror automatically when target equals current DNS
+- Added mirror env model:
+  - `MIRROR_ENABLED`
+  - `MIRROR_TARGET_DNS` (fallback to `TAILSCALE_DNS_NEXTHOUR`)
+  - `MIRROR_TARGET_PORT` (fallback to `NGINX_PORT`)
+  - removed `TAILSCALE_DNS_PREVHOUR` from template env files
+- Updated template copy/publish file lists to include nginx runtime files.
 
 ## [0.8.1] - 2026-02-09
 

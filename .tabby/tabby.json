@@ -113,6 +113,13 @@
           "command": "r_dc_logs",
           "color": "#4a4a4a",
           "sendEnter": true
+        },
+        {
+          "id": "btn_common_dns_tailscale",
+          "label": "dns tailscale0",
+          "command": "sudo resolvectl dns tailscale0 100.100.100.100",
+          "color": "#4a4a4a",
+          "sendEnter": true
         }
       ]
     }

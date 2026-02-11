@@ -1,81 +1,18 @@
-(meta_routes) {
-    @health path /healthz
-    handle @health {
-        header Content-Type application/json
-        respond "{\"status\":\"ok\"}" 200
-    }
-
-    @cwd path /cwd
-    handle @cwd {
-        header Content-Type application/json
-        respond "{\"cwd\":\"{$HOST_CWD}\",\"startTime\":\"{$RUNNER_START_TIME}\"}" 200
-    }
-}
-
-(app_routes) {
-    @files_root path /files
-    redir @files_root /files/ 301
-
-    @files path /files/*
-    handle @files {
-        import /etc/caddy/files-auth.caddy
-        uri strip_prefix /files
-        root * {$HOST_CWD}
-        header Content-Disposition "inline"
-        file_server browse
-    }
-
-    handle {
-        reverse_proxy {$MAIN_URL:127.0.0.1}:{$MAIN_PORT:3000} {$HOLD_URL:127.0.0.1}:{$HOLD_PORT:4000} {
-            lb_policy first
-            lb_try_duration 2s
-            fail_duration 1s
-
-            header_up Host {host}
-            header_up X-Forwarded-Host {host}
-            header_up X-Forwarded-Proto {scheme}
-
-            transport http {
-                dial_timeout 1s
-                read_timeout 3600s
-                write_timeout 3600s
-                response_header_timeout 3600s
-            }
-        }
-    }
-}
-
-http://:8080 {
-    route {
-        import meta_routes
-
-        @origin_https header X-Forwarded-Proto https
-        handle @origin_https {
-            import app_routes
-        }
-
-        # Direct HTTP access on :8080 is redirected to canonical HTTPS URL.
-        # Internal pull-data still uses /cwd and /healthz above.
-        handle {
-            redir https://{host}{uri} 308
-        }
-    }
-}
-
 http://{$CADDY_DOMAIN:localhost} {
-    route {
-        import meta_routes
-
-        # Allow /cwd and /healthz over plain HTTP for legacy/internal callers.
-        handle {
-            redir https://{host}{uri} 308
-        }
-    }
+    redir https://{host}{uri} 308
 }
 
 https://{$CADDY_DOMAIN:localhost} {
-    route {
-        import meta_routes
-        import app_routes
+    reverse_proxy {$CADDY_UPSTREAM_HOST:127.0.0.1}:{$CADDY_UPSTREAM_PORT:8080} {
+        header_up Host {host}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto {scheme}
+
+        transport http {
+            dial_timeout 1s
+            read_timeout 3600s
+            write_timeout 3600s
+            response_header_timeout 3600s
+        }
     }
 }

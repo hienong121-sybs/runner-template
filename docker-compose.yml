@@ -5,7 +5,7 @@
 services:
   tailscale:
     image: tailscale/tailscale:latest
-    hostname: ${DOTENVRTDB_NOW_YYYYDDMMHH:-UNKNOW-DOTENVRTDB_NOW_YYYYDDMMHH}}
+    hostname: ${DOTENVRTDB_NOW_YYYYDDMMHH:-UNKNOW-DOTENVRTDB_NOW_YYYYDDMMHH}
     network_mode: "host"
     environment:
       - TS_AUTHKEY=${TAILSCALE_CLIENT_SECRET}
@@ -29,7 +29,13 @@ services:
         condition: service_started
     network_mode: "service:tailscale"
     restart: "no"
+    dns:
+      - 100.100.100.100
+      - 1.1.1.1
+    dns_search:
+      - ${TAILSCALE_TAILNET_DNS:-tail8ee506.ts.net}
     environment:
+      - TAILSCALE_TAILNET_DNS=${TAILSCALE_TAILNET_DNS}
       - HOST_CWD=${HOST_CWD:-${PWD}}
       - PULL_DATA_SYNC_DIRS=${PULL_DATA_SYNC_DIRS:-.pocketbase}
       - PULL_DATA_SSH_USER=${PULL_DATA_SSH_USER:-}
@@ -54,8 +60,8 @@ services:
         fi
         exec node /opt/pull-data.js
 
-  caddy:
-    image: caddy:2-alpine
+  nginx:
+    image: nginx:1.27-alpine
     depends_on:
       tailscale:
         condition: service_started
@@ -63,13 +69,21 @@ services:
         condition: service_completed_successfully
     network_mode: "host"
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
+      - 1.1.1.1
+    dns_search:
+      - ${TAILSCALE_TAILNET_DNS:-tail8ee506.ts.net}
     environment:
       - HOST_CWD=${HOST_CWD:-${PWD}}
       - MAIN_URL=${MAIN_URL:-127.0.0.1} # host or container_name: main-service
       - MAIN_PORT=${MAIN_PORT:-3000}
-      - HOLD_URL=${HOLD_URL:-127.0.0.1} # host or container_name: hold-service
-      - HOLD_PORT=${HOLD_PORT:-4000}
-      - CADDY_DOMAIN=${CADDY_DOMAIN:-localhost}
+      - NGINX_PORT=${NGINX_PORT:-8080}
+      - TAILSCALE_DNS_CURRENT=${TAILSCALE_DNS_CURRENT:-}
+      - TAILSCALE_DNS_NEXTHOUR=${TAILSCALE_DNS_NEXTHOUR:-}
+      - MIRROR_ENABLED=${MIRROR_ENABLED:-1}
+      - MIRROR_TARGET_DNS=${MIRROR_TARGET_DNS:-${TAILSCALE_DNS_NEXTHOUR:-}}
+      - MIRROR_TARGET_PORT=${MIRROR_TARGET_PORT:-${NGINX_PORT:-8080}}
       - NGINX_AUTH_USER_00=${NGINX_AUTH_USER_00:-}
       - NGINX_AUTH_PASS_00=${NGINX_AUTH_PASS_00:-}
       - NGINX_AUTH_USER_01=${NGINX_AUTH_USER_01:-}
@@ -78,9 +92,35 @@ services:
       - /bin/sh
       - -ec
       - |
-        sh /opt/caddy/entrypoint.sh
+        sh /opt/nginx/entrypoint.sh
     volumes:
       - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}:ro
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/setup-htpasswd.sh:/opt/nginx/setup-htpasswd.sh:ro
+      - ./nginx/entrypoint.sh:/opt/nginx/entrypoint.sh:ro
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      nginx:
+        condition: service_started
+    network_mode: "host"
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+      - 1.1.1.1
+    dns_search:
+      - ${TAILSCALE_TAILNET_DNS:-tail8ee506.ts.net}
+    environment:
+      - CADDY_DOMAIN=${CADDY_DOMAIN:-localhost}
+      - CADDY_UPSTREAM_HOST=${CADDY_UPSTREAM_HOST:-127.0.0.1}
+      - CADDY_UPSTREAM_PORT=${CADDY_UPSTREAM_PORT:-${NGINX_PORT:-8080}}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        sh /opt/caddy/entrypoint.sh
+    volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/entrypoint.sh:/opt/caddy/entrypoint.sh:ro
       - caddy-data:/data
