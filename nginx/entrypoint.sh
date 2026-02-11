@@ -242,8 +242,10 @@ fi
 populate_mirror_slot_00_from_datetime
 
 mirror_targets_file="/tmp/nginx-mirror-targets.conf"
-mirror_directives_file="/etc/nginx/conf.d/mirror-directives.conf"
-mirror_locations_file="/etc/nginx/conf.d/mirror-locations.conf"
+mirror_directives_file="/etc/nginx/conf.d/mirror-directives.inc"
+mirror_locations_file="/etc/nginx/conf.d/mirror-locations.inc"
+# Backward compatibility: remove legacy files that were auto-included at http level.
+rm -f /etc/nginx/conf.d/mirror-directives.conf /etc/nginx/conf.d/mirror-locations.conf
 : > "$mirror_targets_file"
 
 if [ "$NGINX_MIRROR_ENABLED" = "1" ]; then
