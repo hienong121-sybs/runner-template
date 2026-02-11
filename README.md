@@ -209,7 +209,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 ## Runtime pull-data (docker compose)
 
 - Runtime proxy topology:
-  - Caddy: TLS gateway (`http` -> `https`, auto cert)
+  - Caddy: HTTP origin gateway (khong ACME, khong cap cert)
   - Nginx: business proxy + mirror logic on plain HTTP (`:8080` mac dinh)
 - Endpoint `GET /cwd` tren nginx tra ve JSON:
   - `cwd`: gia tri `HOST_CWD`
@@ -234,7 +234,7 @@ Bien moi truong quan trong:
 
 - `PULL_DATA_SYNC_DIRS=.pocketbase`
 - `HOST_CWD=<duong-dan-local-cua-runner>`
-- `CADDY_DOMAIN=<domain-public-de-caddy-tu-cap-ssl>`
+- TLS public duoc terminate boi Cloudflare Tunnel/Edge (khong can `CADDY_DOMAIN` cho ACME).
 - `MAIN_URL=<upstream chinh>`
 - `MAIN_TARGET_DNS=<override DNS cho upstream chinh, mac dinh = MAIN_URL>`
 - `MAIN_TARGET_PORT=<override port cho upstream chinh, mac dinh = MAIN_PORT>`

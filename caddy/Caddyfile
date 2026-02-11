@@ -1,8 +1,4 @@
-http://{$CADDY_DOMAIN:localhost} {
-    redir https://{host}{uri} 308
-}
-
-https://{$CADDY_DOMAIN:localhost} {
+:80 {
     reverse_proxy {$CADDY_UPSTREAM_HOST:127.0.0.1}:{$CADDY_UPSTREAM_PORT:8080} {
         header_up Host {host}
         header_up X-Forwarded-Host {host}
