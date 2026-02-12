@@ -17,6 +17,8 @@
     ".bash/.bash_aliase",
     ".bash/setup-bash-aliase.sh",
     "docker-compose.yml",
+    ".docker-manager/.gitkeep",
+    "docker-manager/**/*",
     "caddy/Caddyfile",
     "caddy/entrypoint.sh",
     "nginx/conf.d/app.conf.template",

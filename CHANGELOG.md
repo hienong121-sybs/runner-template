@@ -14,6 +14,7 @@ This project follows:
 - Switched runtime topology to `Caddy (TLS gateway) -> Nginx (business proxy + mirror)`.
 - Updated `docker-compose.yml`:
   - added dedicated `nginx` service as primary HTTP runtime
+  - added new `docker-manager` service (`/dockerapi/*`) with Docker socket control and tailscale-shadow sync
   - removed `HOLD_URL`/`HOLD_PORT` fallback upstream from runtime path
   - kept `caddy` as automatic HTTPS layer proxying to nginx
 - Reworked Nginx mirror runtime to file-based shadow configuration:
@@ -33,6 +34,9 @@ This project follows:
 - Added Nginx log mount to host in `docker-compose.yml`:
   - `/var/log/nginx` -> `./.nginx/logs`
   - allows direct host-side tail/read for `app.access.log`, `app.error.log`, `shadow.mirror.log`
+- Added docker-manager runtime log mount:
+  - `/opt/docker-manager/runtime` -> `./.docker-manager`
+  - default log file: `./.docker-manager/docker-manager.log`
 - Replaced old resolver bootstrap script flow with runner hooks:
   - `scripts/setup-runner-prev.js`
   - `scripts/setup-runner-after.js`

@@ -11,6 +11,8 @@ data/
 backups/
 .nginx/
 .caddy/
+.docker-manager/*
+!.docker-manager/.gitkeep
 
 # Archives / backups
 *.tar.gz

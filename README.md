@@ -81,6 +81,14 @@ File duoc copy:
 - `.npmignore`
 - `tailscale/access-controls.hujson`
 - `docker-compose.yml`
+- `.docker-manager/.gitkeep`
+- `docker-manager/index.js`
+- `docker-manager/template.js`
+- `docker-manager/lib/config.js`
+- `docker-manager/lib/logger.js`
+- `docker-manager/lib/command-runner.js`
+- `docker-manager/lib/docker-client.js`
+- `docker-manager/lib/tailscale-shadow-sync.js`
 - `caddy/Caddyfile`
 - `caddy/entrypoint.sh`
 - `nginx/conf.d/app.conf.template`
@@ -241,6 +249,29 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 - Nginx logs duoc mount ra host:
   - Thu muc host: `./.nginx/logs`
   - File quan trong: `app.access.log`, `app.error.log`, `shadow.mirror.log`
+- Service `docker-manager`:
+  - API tong hop qua nginx route `/dockerapi/*` (duoc auth bang `.htpasswd`)
+  - Ho tro command nhom `safe` va `dangerous`, mac dinh enable full
+  - Log runtime mount ra host: `./.docker-manager/docker-manager.log`
+  - Scheduler tailscale:
+    - chay `tailscale status --json` theo chu ky
+    - bo qua self, chi lay peer active
+    - dong bo file `nginx/shadow-servers/<ip>.conf`
+    - chi reload nginx khi co thay doi va co rollback neu `nginx -t` fail
+- API mau:
+  - `GET /dockerapi/healthz`
+  - `GET /dockerapi/help`
+  - `GET /dockerapi/tailscale/status`
+  - `GET /dockerapi/tailscale/status?format=json`
+  - `POST /dockerapi/tailscale/ping?target=<ip-or-host>`
+  - `GET /dockerapi/nginx/test`
+  - `POST /dockerapi/nginx/reload`
+  - `GET /dockerapi/nginx/version`
+  - `GET /dockerapi/system/ps`
+  - `GET /dockerapi/<container>/status`
+  - `GET /dockerapi/<container>/logs?tail=200`
+  - `POST /dockerapi/<container>/restart`
+  - `POST /dockerapi/<container>/exec?cmd=ls%20-la`
 
 Bien moi truong quan trong:
 
@@ -259,6 +290,15 @@ Bien moi truong quan trong:
 - Mirror file-based:
   - `nginx/maps/mirror_rules.map`
   - `nginx/shadow-servers/*.conf`
+- Docker manager:
+  - `DOCKER_MANAGER_PORT=18080`
+  - `DOCKER_MANAGER_TAILSCALE_SYNC_ENABLED=1`
+  - `DOCKER_MANAGER_TAILSCALE_SYNC_INTERVAL_SEC=30`
+  - `DOCKER_MANAGER_ENABLE_SAFE_COMMANDS=1`
+  - `DOCKER_MANAGER_ENABLE_DANGEROUS_COMMANDS=1`
+  - `DOCKER_MANAGER_ALLOWED_SAFE_COMMANDS=*`
+  - `DOCKER_MANAGER_ALLOWED_DANGEROUS_COMMANDS=*`
+  - `DOCKER_MANAGER_BLOCKED_COMMANDS=`
 
 ## Giai thich nhanh path filter
 
