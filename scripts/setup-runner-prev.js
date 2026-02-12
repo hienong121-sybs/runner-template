@@ -8,6 +8,95 @@ const executeMain = (() => {
   try {
     const envFilePath = helper.readEnv("RUNNER_ENV_FILE", ".env");
 
+    const step00_normalizeRuntimePorts = (() => {
+      const persistEnvValue = (key, value) => {
+        process.env[key] = value;
+        return helper.updateEnvFileValue(envFilePath, key, value);
+      };
+      const isValidPort = (value) => {
+        const normalized = helper.normalizeValue(value);
+        if (!/^\d+$/.test(normalized)) {
+          return false;
+        }
+        const parsed = Number.parseInt(normalized, 10);
+        return Number.isFinite(parsed) && parsed >= 1 && parsed <= 65535;
+      };
+      const normalizeNginxPort = (rawValue) => {
+        const normalized = helper.normalizeValue(rawValue);
+        if (!isValidPort(normalized)) {
+          return {
+            value: "8080",
+            reason: "invalid_or_empty",
+          };
+        }
+        if (normalized === "80") {
+          return {
+            value: "8080",
+            reason: "reserved_for_caddy_host_listener",
+          };
+        }
+        return {
+          value: normalized,
+          reason: "unchanged",
+        };
+      };
+
+      try {
+        const nginxPortRaw = helper.readEnv("NGINX_PORT", "8080");
+        const normalizedNginxPort = normalizeNginxPort(nginxPortRaw);
+        let nginxEnvUpdated = false;
+
+        if (normalizedNginxPort.value !== nginxPortRaw) {
+          nginxEnvUpdated = persistEnvValue("NGINX_PORT", normalizedNginxPort.value);
+          helper.logInfo(
+            "setup-runner-prev",
+            `step00_normalizeRuntimePorts set NGINX_PORT=${normalizedNginxPort.value} (from ${nginxPortRaw}, reason=${normalizedNginxPort.reason})`,
+          );
+          if (!nginxEnvUpdated) {
+            helper.logInfo("setup-runner-prev", `step00_normalizeRuntimePorts warning: cannot persist NGINX_PORT to '${envFilePath}'`);
+          }
+        } else {
+          helper.logInfo("setup-runner-prev", `step00_normalizeRuntimePorts keep NGINX_PORT=${nginxPortRaw}`);
+        }
+
+        const caddyUpstreamPortRaw = helper.readEnv("CADDY_UPSTREAM_PORT", "");
+        let caddyPortResolved = caddyUpstreamPortRaw;
+        let caddyEnvUpdated = false;
+        let caddyReason = "unchanged";
+
+        if (caddyUpstreamPortRaw) {
+          if (!isValidPort(caddyUpstreamPortRaw) || caddyUpstreamPortRaw === "80") {
+            caddyPortResolved = normalizedNginxPort.value;
+            caddyReason = !isValidPort(caddyUpstreamPortRaw) ? "invalid" : "reserved_for_caddy_listener";
+          }
+          if (caddyPortResolved !== caddyUpstreamPortRaw) {
+            caddyEnvUpdated = persistEnvValue("CADDY_UPSTREAM_PORT", caddyPortResolved);
+            helper.logInfo(
+              "setup-runner-prev",
+              `step00_normalizeRuntimePorts set CADDY_UPSTREAM_PORT=${caddyPortResolved} (from ${caddyUpstreamPortRaw}, reason=${caddyReason})`,
+            );
+            if (!caddyEnvUpdated) {
+              helper.logInfo("setup-runner-prev", `step00_normalizeRuntimePorts warning: cannot persist CADDY_UPSTREAM_PORT to '${envFilePath}'`);
+            }
+          }
+        }
+
+        return {
+          nginxPortRaw,
+          nginxPort: normalizedNginxPort.value,
+          nginxReason: normalizedNginxPort.reason,
+          nginxEnvUpdated,
+          caddyUpstreamPortRaw: caddyUpstreamPortRaw || null,
+          caddyUpstreamPort: caddyPortResolved || null,
+          caddyReason,
+          caddyEnvUpdated,
+        };
+      } catch (error) {
+        helper.logError("setup-runner-prev", error, "step00_normalizeRuntimePorts failed");
+        throw error;
+      }
+    })();
+
     const step00_resolveDns = (() => {
       const persistEnvValue = (key, value) => {
         process.env[key] = value;
@@ -272,10 +361,10 @@ const executeMain = (() => {
 
     const step01_SumaryStep = (() => {
       try {
-        helper.logInfo("setup-runner-prev", `summary: ${JSON.stringify({ step00_resolveDns })}`);
+        helper.logInfo("setup-runner-prev", `summary: ${JSON.stringify({ step00_normalizeRuntimePorts, step00_resolveDns })}`);
         return {
           success: true,
-          totalSteps: 2,
+          totalSteps: 3,
         };
       } catch (error) {
         helper.logError("setup-runner-prev", error, "step01_SumaryStep failed");
@@ -284,6 +373,7 @@ const executeMain = (() => {
     })();
 
     return {
+      step00_normalizeRuntimePorts,
       step00_resolveDns,
       step01_SumaryStep,
     };

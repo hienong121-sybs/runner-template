@@ -278,7 +278,16 @@ const executeMain = (async () => {
 
     const step02_verifyNginxHealth = await (async () => {
       try {
-        const nginxPort = helper.readIntEnv("NGINX_PORT", 8080);
+        const rawNginxPort = helper.readIntEnv("NGINX_PORT", 8080);
+        let nginxPort = rawNginxPort;
+        if (rawNginxPort === 80) {
+          const caddyUpstreamPort = helper.readIntEnv("CADDY_UPSTREAM_PORT", 8080);
+          nginxPort = caddyUpstreamPort === 80 ? 8080 : caddyUpstreamPort;
+          helper.logInfo(
+            "setup-runner-after",
+            `step02_verifyNginxHealth remap NGINX_PORT=80 to port ${nginxPort} to avoid host :80 conflict with Caddy`,
+          );
+        }
         const timeoutSec = helper.readIntEnv("RUNNER_AFTER_HEALTH_TIMEOUT_SEC", 45);
         const intervalMs = helper.readIntEnv("RUNNER_AFTER_HEALTH_INTERVAL_MS", 2000);
         const required = helper.readEnv("RUNNER_AFTER_HEALTH_REQUIRED", "0") === "1";
