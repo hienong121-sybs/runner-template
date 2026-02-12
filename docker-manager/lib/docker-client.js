@@ -28,6 +28,8 @@ class DockerClient {
   constructor(config, logger) {
     this.config = config;
     this.logger = logger;
+    this.containerResolveCache = new Map();
+    this.containerResolveTtlMs = 10000;
   }
 
   async runDocker(args, options = {}) {
@@ -51,9 +53,94 @@ class DockerClient {
     }
   }
 
-  async execInContainer(containerName, commandArgs, options = {}) {
+  readFirstLine(text) {
+    const lines = String(text || "")
+      .split(/\r?\n/g)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      return "";
+    }
+    return lines[0];
+  }
+
+  readResolveCache(containerName) {
+    const key = normalizeValue(containerName);
+    const cached = this.containerResolveCache.get(key);
+    if (!cached) {
+      return "";
+    }
+    if (cached.expiresAt <= Date.now()) {
+      this.containerResolveCache.delete(key);
+      return "";
+    }
+    return cached.value;
+  }
+
+  writeResolveCache(containerName, resolvedName) {
+    const key = normalizeValue(containerName);
+    const value = normalizeValue(resolvedName);
+    if (!key || !value) {
+      return;
+    }
+    this.containerResolveCache.set(key, {
+      value,
+      expiresAt: Date.now() + this.containerResolveTtlMs,
+    });
+  }
+
+  async findContainerByComposeService(serviceName) {
+    const service = normalizeValue(serviceName);
+    if (!service) {
+      return "";
+    }
+    const args = ["--filter", `label=com.docker.compose.service=${service}`, "--format", "{{.Names}}"];
+    const running = await this.runDocker(["ps", ...args], { allowFailure: true, timeoutMs: 5000 });
+    const runningName = this.readFirstLine(running.stdout);
+    if (runningName) {
+      return runningName;
+    }
+
+    const anyState = await this.runDocker(["ps", "-a", ...args], { allowFailure: true, timeoutMs: 5000 });
+    return this.readFirstLine(anyState.stdout);
+  }
+
+  async resolveContainerTarget(containerName) {
     this.assertContainerName(containerName);
-    return this.runDocker(["exec", containerName, ...commandArgs], options);
+    const directName = normalizeValue(containerName);
+
+    const cached = this.readResolveCache(directName);
+    if (cached) {
+      return cached;
+    }
+
+    const directInspect = await this.runDocker(["container", "inspect", directName], {
+      allowFailure: true,
+      timeoutMs: 5000,
+    });
+    if (directInspect.code === 0) {
+      this.writeResolveCache(directName, directName);
+      return directName;
+    }
+
+    const composeResolved = await this.findContainerByComposeService(directName);
+    if (composeResolved) {
+      this.writeResolveCache(directName, composeResolved);
+      this.writeResolveCache(composeResolved, composeResolved);
+      if (this.logger && typeof this.logger.info === "function") {
+        this.logger.info("docker-client", `resolved compose service '${directName}' to container '${composeResolved}'`);
+      }
+      return composeResolved;
+    }
+
+    throw new Error(
+      `container not found: ${directName}. Hint: set DOCKER_MANAGER_TAILSCALE_CONTAINER/DOCKER_MANAGER_NGINX_CONTAINER to actual container name if needed`,
+    );
+  }
+
+  async execInContainer(containerName, commandArgs, options = {}) {
+    const resolved = await this.resolveContainerTarget(containerName);
+    return this.runDocker(["exec", resolved, ...commandArgs], options);
   }
 
   async tailscaleStatus({ asJson = false } = {}) {
@@ -151,12 +238,12 @@ class DockerClient {
   }
 
   async containerStatus(containerName) {
-    this.assertContainerName(containerName);
-    return this.runDocker(["ps", "-a", "--filter", `name=^/${containerName}$`]);
+    const resolved = await this.resolveContainerTarget(containerName);
+    return this.runDocker(["ps", "-a", "--filter", `name=^/${resolved}$`]);
   }
 
   async containerLogs(containerName, options = {}) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     const args = ["logs"];
     const tail = parsePositiveInt(options.tail, this.config.defaultLogTail, { min: 1, max: this.config.maxLogLines });
     args.push("--tail", String(tail));
@@ -166,78 +253,78 @@ class DockerClient {
     if (normalizeValue(options.timestamps) === "1") {
       args.push("--timestamps");
     }
-    args.push(containerName);
+    args.push(resolved);
     return this.runDocker(args, { allowFailure: true });
   }
 
   async containerInspect(containerName) {
-    this.assertContainerName(containerName);
-    return this.runDocker(["inspect", containerName]);
+    const resolved = await this.resolveContainerTarget(containerName);
+    return this.runDocker(["inspect", resolved]);
   }
 
   async containerTop(containerName) {
-    this.assertContainerName(containerName);
-    return this.runDocker(["top", containerName], { allowFailure: true });
+    const resolved = await this.resolveContainerTarget(containerName);
+    return this.runDocker(["top", resolved], { allowFailure: true });
   }
 
   async containerStats(containerName) {
-    this.assertContainerName(containerName);
-    return this.runDocker(["stats", "--no-stream", containerName], { allowFailure: true });
+    const resolved = await this.resolveContainerTarget(containerName);
+    return this.runDocker(["stats", "--no-stream", resolved], { allowFailure: true });
   }
 
   async containerMutate(containerName, commandName) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     switch (commandName) {
       case "start":
-        return this.runDocker(["start", containerName], { allowFailure: true });
+        return this.runDocker(["start", resolved], { allowFailure: true });
       case "stop":
-        return this.runDocker(["stop", containerName], { allowFailure: true });
+        return this.runDocker(["stop", resolved], { allowFailure: true });
       case "restart":
-        return this.runDocker(["restart", containerName], { allowFailure: true });
+        return this.runDocker(["restart", resolved], { allowFailure: true });
       case "pause":
-        return this.runDocker(["pause", containerName], { allowFailure: true });
+        return this.runDocker(["pause", resolved], { allowFailure: true });
       case "unpause":
-        return this.runDocker(["unpause", containerName], { allowFailure: true });
+        return this.runDocker(["unpause", resolved], { allowFailure: true });
       case "kill":
-        return this.runDocker(["kill", containerName], { allowFailure: true });
+        return this.runDocker(["kill", resolved], { allowFailure: true });
       case "rm":
-        return this.runDocker(["rm", "-f", containerName], { allowFailure: true });
+        return this.runDocker(["rm", "-f", resolved], { allowFailure: true });
       default:
         throw new Error(`unsupported container command: ${commandName}`);
     }
   }
 
   async containerRename(containerName, toName) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     this.assertContainerName(toName);
-    return this.runDocker(["rename", containerName, toName], { allowFailure: true });
+    return this.runDocker(["rename", resolved, toName], { allowFailure: true });
   }
 
   async containerUpdate(containerName, updateArgs) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     if (!Array.isArray(updateArgs) || updateArgs.length === 0) {
       throw new Error("container update requires args");
     }
-    return this.runDocker(["update", ...updateArgs, containerName], { allowFailure: true });
+    return this.runDocker(["update", ...updateArgs, resolved], { allowFailure: true });
   }
 
   async containerExec(containerName, shellName, commandText) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     const shell = normalizeValue(shellName) || this.config.execShell;
     const safeShell = ["sh", "bash", "zsh", "ash"].includes(shell) ? shell : "sh";
     const command = normalizeValue(commandText);
     if (!command) {
       throw new Error("container exec requires command");
     }
-    return this.runDocker(["exec", containerName, safeShell, "-lc", command], { allowFailure: true });
+    return this.runDocker(["exec", resolved, safeShell, "-lc", command], { allowFailure: true });
   }
 
   async containerRaw(containerName, args) {
-    this.assertContainerName(containerName);
+    const resolved = await this.resolveContainerTarget(containerName);
     if (!Array.isArray(args) || args.length === 0) {
       throw new Error("container raw command requires args");
     }
-    return this.runDocker([...args, containerName], { allowFailure: true });
+    return this.runDocker([...args, resolved], { allowFailure: true });
   }
 }
 
