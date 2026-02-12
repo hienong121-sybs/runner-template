@@ -249,6 +249,11 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 - Nginx logs duoc mount ra host:
   - Thu muc host: `./.nginx/logs`
   - File quan trong: `app.access.log`, `app.error.log`, `shadow.mirror.log`
+- Nginx runtime config duoc mount ra host:
+  - `./.nginx/runtime/conf.d` <-> `/etc/nginx/conf.d`
+  - `./.nginx/runtime/upstreams` <-> `/etc/nginx/upstreams`
+  - `./.nginx/runtime/auth` <-> `/etc/nginx/auth`
+  - Co the xem file da render sau envsubst tai host (vd: `./.nginx/runtime/conf.d/app.conf`)
 - Service `docker-manager`:
   - API tong hop qua nginx route `/dockerapi/*` (duoc auth bang `.htpasswd`)
   - Ho tro command nhom `safe` va `dangerous`, mac dinh enable full

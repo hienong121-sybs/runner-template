@@ -34,6 +34,11 @@ This project follows:
 - Added Nginx log mount to host in `docker-compose.yml`:
   - `/var/log/nginx` -> `./.nginx/logs`
   - allows direct host-side tail/read for `app.access.log`, `app.error.log`, `shadow.mirror.log`
+- Added Nginx runtime config mounts to host in `docker-compose.yml`:
+  - `/etc/nginx/conf.d` -> `./.nginx/runtime/conf.d`
+  - `/etc/nginx/upstreams` -> `./.nginx/runtime/upstreams`
+  - `/etc/nginx/auth` -> `./.nginx/runtime/auth`
+  - allows direct host-side inspection of rendered nginx runtime files
 - Added docker-manager runtime log mount:
   - `/opt/docker-manager/runtime` -> `./.docker-manager`
   - default log file: `./.docker-manager/docker-manager.log`

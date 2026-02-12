@@ -106,6 +106,9 @@ services:
       - ./nginx/conf.d:/etc/nginx/templates/conf.d:ro
       - ./nginx/upstreams:/etc/nginx/templates/upstreams:ro
       - ./nginx/maps:/etc/nginx/maps:ro
+      - ./.nginx/runtime/conf.d:/etc/nginx/conf.d
+      - ./.nginx/runtime/upstreams:/etc/nginx/upstreams
+      - ./.nginx/runtime/auth:/etc/nginx/auth
       - ./nginx/shadow-servers:/etc/nginx/shadow-servers
       - ./nginx/scripts:/opt/nginx/scripts:ro
       - ./nginx/setup-htpasswd.sh:/opt/nginx/setup-htpasswd.sh:ro
