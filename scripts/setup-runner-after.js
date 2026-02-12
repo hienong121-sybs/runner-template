@@ -281,9 +281,12 @@ const executeMain = (async () => {
         const nginxPort = helper.readIntEnv("NGINX_PORT", 8080);
         const timeoutSec = helper.readIntEnv("RUNNER_AFTER_HEALTH_TIMEOUT_SEC", 45);
         const intervalMs = helper.readIntEnv("RUNNER_AFTER_HEALTH_INTERVAL_MS", 2000);
+        const required = helper.readEnv("RUNNER_AFTER_HEALTH_REQUIRED", "0") === "1";
         const url = `http://127.0.0.1:${nginxPort}/healthz`;
         const deadline = Date.now() + timeoutSec * 1000;
         let attempt = 0;
+        let lastError = "";
+        let lastStatusCode = null;
 
         while (Date.now() <= deadline) {
           attempt += 1;
@@ -291,16 +294,33 @@ const executeMain = (async () => {
             const response = await helper.request(url, 3000);
             if (response.statusCode >= 200 && response.statusCode < 300) {
               helper.logInfo("setup-runner-after", `step02_verifyNginxHealth ok on attempt ${attempt}: ${url}`);
-              return { url, attempt, statusCode: response.statusCode };
+              return { url, attempt, statusCode: response.statusCode, required };
             }
+            lastStatusCode = response.statusCode;
             helper.logInfo("setup-runner-after", `health check attempt ${attempt} returned ${response.statusCode}`);
           } catch (error) {
-            helper.logInfo("setup-runner-after", `health check attempt ${attempt} failed: ${error.message}`);
+            lastError = error && error.message ? error.message : String(error);
+            helper.logInfo("setup-runner-after", `health check attempt ${attempt} failed: ${lastError}`);
           }
           await helper.sleep(intervalMs);
         }
 
-        throw new Error(`health check failed for ${url} after ${timeoutSec}s`);
+        if (required) {
+          throw new Error(`health check failed for ${url} after ${timeoutSec}s`);
+        }
+
+        helper.logInfo(
+          "setup-runner-after",
+          `step02_verifyNginxHealth pending after ${timeoutSec}s (non-blocking): url=${url}${lastStatusCode ? `, lastStatus=${lastStatusCode}` : ""}${lastError ? `, lastError=${lastError}` : ""}`,
+        );
+        return {
+          url,
+          pending: true,
+          required,
+          timeoutSec,
+          lastStatusCode,
+          lastError: lastError || null,
+        };
       } catch (error) {
         helper.logError("setup-runner-after", error, "step02_verifyNginxHealth failed");
         throw error;
