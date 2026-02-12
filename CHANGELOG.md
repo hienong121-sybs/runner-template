@@ -23,7 +23,7 @@ This project follows:
     - `nginx/upstreams/main_upstream.conf.template`
     - `nginx/upstreams/shadow_upstream.conf.template`
     - `nginx/maps/mirror_rules.map`
-    - `nginx/shadow-servers/*.conf`
+    - `./.nginx/runtime/shadow-servers/*.conf`
   - added helper scripts to manage shadow backends:
     - `nginx/scripts/shadow-add.sh`
     - `nginx/scripts/shadow-rm.sh`
@@ -38,6 +38,7 @@ This project follows:
   - `/etc/nginx/conf.d` -> `./.nginx/runtime/conf.d`
   - `/etc/nginx/upstreams` -> `./.nginx/runtime/upstreams`
   - `/etc/nginx/auth` -> `./.nginx/runtime/auth`
+  - `/etc/nginx/shadow-servers` -> `./.nginx/runtime/shadow-servers`
   - allows direct host-side inspection of rendered nginx runtime files
 - Added docker-manager runtime log mount:
   - `/opt/docker-manager/runtime` -> `./.docker-manager`

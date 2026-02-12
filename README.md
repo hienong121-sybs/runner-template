@@ -93,7 +93,7 @@ File duoc copy:
 - `caddy/entrypoint.sh`
 - `nginx/conf.d/app.conf.template`
 - `nginx/maps/mirror_rules.map`
-- `nginx/shadow-servers/.gitkeep`
+- `.nginx/runtime/shadow-servers/.gitkeep`
 - `nginx/scripts/shadow-add.sh`
 - `nginx/scripts/shadow-rm.sh`
 - `nginx/scripts/shadow-sync.sh`
@@ -241,7 +241,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - luon exclude thu muc `.git` trong du lieu sync
 - Mirror runtime:
   - Luong chinh proxy vao `MAIN_TARGET_DNS:MAIN_TARGET_PORT` (mac dinh `127.0.0.1:3000`)
-  - Shadow backend duoc quan ly bang file: `nginx/shadow-servers/<ip>.conf`
+  - Shadow backend duoc quan ly bang file: `./.nginx/runtime/shadow-servers/<ip>.conf`
   - Rules mirror duoc cau hinh trong: `nginx/maps/mirror_rules.map`
   - Anti-loop dung header `X-Shadow: 1`, request da la shadow se khong mirror tiep
   - Audit log mirror: `./.nginx/logs/shadow.mirror.log`
@@ -253,6 +253,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - `./.nginx/runtime/conf.d` <-> `/etc/nginx/conf.d`
   - `./.nginx/runtime/upstreams` <-> `/etc/nginx/upstreams`
   - `./.nginx/runtime/auth` <-> `/etc/nginx/auth`
+  - `./.nginx/runtime/shadow-servers` <-> `/etc/nginx/shadow-servers`
   - Co the xem file da render sau envsubst tai host (vd: `./.nginx/runtime/conf.d/app.conf`)
 - Service `docker-manager`:
   - API tong hop qua nginx route `/dockerapi/*` (duoc auth bang `.htpasswd`)
@@ -261,7 +262,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - Scheduler tailscale:
     - chay `tailscale status --json` theo chu ky
     - bo qua self, chi lay peer active
-    - dong bo file `nginx/shadow-servers/<ip>.conf`
+    - dong bo file `./.nginx/runtime/shadow-servers/<ip>.conf`
     - chi reload nginx khi co thay doi va co rollback neu `nginx -t` fail
 - API mau:
   - `GET /dockerapi/healthz`
@@ -294,7 +295,7 @@ Bien moi truong quan trong:
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
 - Mirror file-based:
   - `nginx/maps/mirror_rules.map`
-  - `nginx/shadow-servers/*.conf`
+  - `./.nginx/runtime/shadow-servers/*.conf`
 - Docker manager:
   - `DOCKER_MANAGER_PORT=18080`
   - `DOCKER_MANAGER_TAILSCALE_SYNC_ENABLED=1`

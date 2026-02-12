@@ -10,6 +10,13 @@ volumes/
 data/
 backups/
 .nginx/
+!.nginx/
+.nginx/*
+!.nginx/runtime/
+.nginx/runtime/*
+!.nginx/runtime/shadow-servers/
+.nginx/runtime/shadow-servers/*
+!.nginx/runtime/shadow-servers/.gitkeep
 .caddy/
 .docker-manager/*
 !.docker-manager/.gitkeep

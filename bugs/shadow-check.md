@@ -10,7 +10,7 @@ Tai lieu nay gom cac lenh thuong dung de kiem tra luong mirror/shadow trong topo
 - Da co auth cho `dockerapi`:
   - `NGINX_AUTH_USER_00`
   - `NGINX_AUTH_PASS_00`
-- Da co peer shadow trong `nginx/shadow-servers/*.conf` (neu khong se khong co dich de mirror den).
+- Da co peer shadow trong `./.nginx/runtime/shadow-servers/*.conf` (neu khong se khong co dich de mirror den).
 
 ## 2) Kiem tra bang API (qua nginx)
 
@@ -80,12 +80,13 @@ tail -F .nginx/logs/app.access.log .nginx/logs/app.error.log .nginx/logs/shadow.
 ### 3.4 Xem runtime config da render tren host
 
 ```bash
-mkdir -p .nginx/runtime/conf.d .nginx/runtime/upstreams .nginx/runtime/auth
-ls -la .nginx/runtime/conf.d .nginx/runtime/upstreams .nginx/runtime/auth
+mkdir -p .nginx/runtime/conf.d .nginx/runtime/upstreams .nginx/runtime/auth .nginx/runtime/shadow-servers
+ls -la .nginx/runtime/conf.d .nginx/runtime/upstreams .nginx/runtime/auth .nginx/runtime/shadow-servers
 cat .nginx/runtime/conf.d/app.conf
 cat .nginx/runtime/upstreams/main_upstream.conf
 cat .nginx/runtime/upstreams/shadow_upstream.conf
 cat .nginx/runtime/auth/.htpasswd
+ls -la .nginx/runtime/shadow-servers
 ```
 
 ### 3.5 Xem log truc tiep trong container nginx
@@ -175,7 +176,7 @@ docker exec -it "$NGX" sh -lc 'nginx -t && nginx -s reload'
 
 ## 8) Checklist nhanh
 
-- [ ] Co peer file trong `nginx/shadow-servers/*.conf`
+- [ ] Co peer file trong `./.nginx/runtime/shadow-servers/*.conf`
 - [ ] `nginx -t` pass
 - [ ] POST `/api/...` tao duoc request test
 - [ ] `app.error.log` co `subrequest: "/__shadow"`

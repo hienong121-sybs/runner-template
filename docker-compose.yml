@@ -109,7 +109,7 @@ services:
       - ./.nginx/runtime/conf.d:/etc/nginx/conf.d
       - ./.nginx/runtime/upstreams:/etc/nginx/upstreams
       - ./.nginx/runtime/auth:/etc/nginx/auth
-      - ./nginx/shadow-servers:/etc/nginx/shadow-servers
+      - ./.nginx/runtime/shadow-servers:/etc/nginx/shadow-servers
       - ./nginx/scripts:/opt/nginx/scripts:ro
       - ./nginx/setup-htpasswd.sh:/opt/nginx/setup-htpasswd.sh:ro
       - ./.nginx/logs:/var/log/nginx
@@ -158,7 +158,7 @@ services:
       - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}
       - ./docker-manager:/opt/docker-manager:ro
       - ./.docker-manager:/opt/docker-manager-runtime
-      - ./nginx/shadow-servers:/opt/nginx/shadow-servers
+      - ./.nginx/runtime/shadow-servers:/opt/nginx/shadow-servers
       - /var/run/docker.sock:/var/run/docker.sock
 
   caddy:

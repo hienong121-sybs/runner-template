@@ -32,7 +32,7 @@ const templateFiles = [
   "caddy/entrypoint.sh",
   "nginx/conf.d/app.conf.template",
   "nginx/maps/mirror_rules.map",
-  "nginx/shadow-servers/.gitkeep",
+  ".nginx/runtime/shadow-servers/.gitkeep",
   "nginx/scripts/shadow-add.sh",
   "nginx/scripts/shadow-rm.sh",
   "nginx/scripts/shadow-sync.sh",
