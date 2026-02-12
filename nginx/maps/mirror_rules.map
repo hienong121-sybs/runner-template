@@ -11,17 +11,7 @@ map $request_method $mirror_by_method {
   DELETE  1;
 }
 
-map $uri $mirror_by_path {
+map "$mirror_by_header|$mirror_by_method" $do_mirror {
   default 0;
-
-  ~^/api/                          1;
-
-  ~^/(health|healthz|metrics)$     0;
-  ~^/(files|static)/               0;
-  ~^/__shadow                      0;
-}
-
-map "$mirror_by_header|$mirror_by_method|$mirror_by_path" $do_mirror {
-  default 0;
-  "1|1|1" 1;
+  "1|1" 1;
 }
