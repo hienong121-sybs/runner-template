@@ -331,15 +331,18 @@ const executeMain = (async () => {
 
     const step04_SumaryStep = (() => {
       try {
-        const hasRuntimeSnapshot = Boolean(helper.readFileIfExists(".nginx/runtime.env"));
-        helper.logInfo("setup-runner-after", `runtime snapshot found: ${hasRuntimeSnapshot ? "yes" : "no"}`);
+        const hasLogDir = fs.existsSync(".nginx/logs");
+        const hasShadowAuditLog = Boolean(helper.readFileIfExists(".nginx/logs/shadow.mirror.log"));
+        helper.logInfo("setup-runner-after", `nginx host log dir found: ${hasLogDir ? "yes" : "no"}`);
+        helper.logInfo("setup-runner-after", `shadow audit log found: ${hasShadowAuditLog ? "yes" : "no"}`);
         helper.logInfo(
           "setup-runner-after",
           `summary: ${JSON.stringify({ step00_configureResolver, step01_resolveDns, step02_verifyNginxHealth, step03_showComposeStatus })}`,
         );
         return {
           success: true,
-          hasRuntimeSnapshot,
+          hasLogDir,
+          hasShadowAuditLog,
           totalSteps: 5,
         };
       } catch (error) {

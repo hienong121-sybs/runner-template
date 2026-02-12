@@ -16,27 +16,30 @@ This project follows:
   - added dedicated `nginx` service as primary HTTP runtime
   - removed `HOLD_URL`/`HOLD_PORT` fallback upstream from runtime path
   - kept `caddy` as automatic HTTPS layer proxying to nginx
-- Updated `nginx/default.template.conf`:
-  - keeps `/files`, `/cwd`, `/healthz` endpoints
-  - primary upstream is now only `MAIN_URL:MAIN_PORT`
-  - added one-way mirror subrequest flow with env gating
-- Added `nginx/entrypoint.sh`:
-  - sets startup time for `/cwd`
-  - renders nginx template by env
-  - disables mirror automatically when target equals current DNS
+- Reworked Nginx mirror runtime to file-based shadow configuration:
+  - replaced dynamic mirror generation from env vars with fixed file layout:
+    - `nginx/conf.d/app.conf.template`
+    - `nginx/upstreams/main_upstream.conf.template`
+    - `nginx/upstreams/shadow_upstream.conf.template`
+    - `nginx/maps/mirror_rules.map`
+    - `nginx/shadow-servers/*.conf`
+  - added helper scripts to manage shadow backends:
+    - `nginx/scripts/shadow-add.sh`
+    - `nginx/scripts/shadow-rm.sh`
+    - `nginx/scripts/shadow-sync.sh`
+  - removed runtime dependency on `NGINX_MIRROR_ENABLED` and `NGINX_MIRROR_URL_PORT_*`
+  - removed auto-derive logic for `NGINX_MIRROR_URL_PORT_00` from `scripts/setup-runner-prev.js`
+  - kept `/files`, `/cwd`, `/healthz` and Caddy -> Nginx flow unchanged
+- Added Nginx log mount to host in `docker-compose.yml`:
+  - `/var/log/nginx` -> `./.nginx/logs`
+  - allows direct host-side tail/read for `app.access.log`, `app.error.log`, `shadow.mirror.log`
 - Replaced old resolver bootstrap script flow with runner hooks:
   - `scripts/setup-runner-prev.js`
   - `scripts/setup-runner-after.js`
   - shared helpers in `scripts/setup-runner-helper.js`
 - Updated `runner-template-createtunnel` default non-SSH ingress service from `http://127.0.0.1:8080` to `http://127.0.0.1:80` so public hostname traffic reaches Caddy first (required for ACME HTTP challenge).
 - Changed Caddy runtime to HTTP-only origin listener (`:80`) behind Cloudflare Tunnel and removed ACME/TLS issuance from Caddy flow.
-- Added mirror env model:
-  - `MIRROR_ENABLED`
-  - `MIRROR_TARGET_DNS` (fallback to `TAILSCALE_DNS_NEXTHOUR`)
-  - `MIRROR_TARGET_PORT` (fallback to `NGINX_PORT`)
-  - removed `TAILSCALE_DNS_PREVHOUR` from template env files
 - Updated template copy/publish file lists to include nginx runtime files.
-- Moved auto-derive logic for `NGINX_MIRROR_URL_PORT_00` from `nginx/entrypoint.sh` to `scripts/setup-runner-prev.js` (runs before `docker compose up`).
 - Updated `scripts/setup-runner-prev.js` DNS step gate to use `DNS_NAMESERVER_PRIMARY` and sync legacy `DNS_*` vars to `TAILSCALE_DNS_*` keys when missing.
 
 ## [0.8.1] - 2026-02-09

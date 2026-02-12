@@ -64,32 +64,6 @@ module.exports = (() => {
 
   const isLinux = () => process.platform === "linux";
 
-  const parseHostFromUrlPort = (value) => {
-    const normalized = normalizeValue(value);
-    if (!normalized) {
-      return "";
-    }
-    const lastColon = normalized.lastIndexOf(":");
-    if (lastColon <= 0) {
-      return normalized;
-    }
-    return normalizeValue(normalized.slice(0, lastColon));
-  };
-
-  const pickProbeHost = () => {
-    const candidates = [
-      readEnv("TAILSCALE_DNS_NEXTHOUR", ""),
-      readEnv("TAILSCALE_DNS_CURRENT", ""),
-      parseHostFromUrlPort(readEnv("NGINX_MIRROR_URL_PORT_00", "")),
-    ];
-    for (const candidate of candidates) {
-      if (candidate) {
-        return candidate;
-      }
-    }
-    return "";
-  };
-
   const canResolveHost = (host) => {
     if (!host) {
       return true;
@@ -225,8 +199,6 @@ module.exports = (() => {
     logError,
     runCommand,
     isLinux,
-    parseHostFromUrlPort,
-    pickProbeHost,
     canResolveHost,
     buildResolvConf,
     writeResolvConf,

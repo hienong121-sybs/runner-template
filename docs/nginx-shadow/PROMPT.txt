@@ -1,0 +1,24 @@
+Bạn là một chuyên gia DevOps/SRE. Hãy giúp tôi thiết kế và triển khai cấu hình Nginx phục vụ “shadow traffic” (mirroring) giữa các host trong mạng Tailscale, theo các yêu cầu sau:
+
+- Mục tiêu: Mirror (shadow) request sang các host “shadow” khác mà không ảnh hưởng request chính.
+- Danh sách host shadow là động: IP lấy từ mạng Tailscale, host join/leave liên tục.
+- Quản trị động theo thư mục: mỗi IP shadow là 1 file riêng (mỗi file chứa 1 dòng server), thêm file => add host, xoá file => remove host. Sau thay đổi sẽ chạy reload.
+- Reload Nginx cần “zero-downtime” (không gián đoạn): luôn test config trước khi reload.
+- Chống loop: nếu các host A và B mirror qua lại, phải có cơ chế chống lặp vòng request bằng header (ví dụ X-Shadow: 1). Request đã là shadow thì tuyệt đối không mirror tiếp.
+- Lọc mirror theo METHOD: không mirror GET; chỉ mirror POST/PUT/PATCH/DELETE (có thể cấu hình lại).
+- Lọc mirror theo PATH: ví dụ chỉ mirror các endpoint /api/, và chặn các path như /health, /metrics, /files, /static, /__shadow* (có thể cấu hình lại).
+- Logging/Audit: cần log riêng cho shadow để biết “đã mirror gì” và “mirror tới host nào”:
+  - Tách access_log riêng cho shadow endpoint
+  - Log phải có: mirror_id (correlation), method, uri, status, request_time, upstream_addr, upstream_status, upstream_response_time, X-Shadow
+  - Shadow request cần gắn header X-Mirror-Id để correlation
+- Template cần tách file rõ ràng:
+  1) file conf chính (server + location)
+  2) file upstream chính
+  3) file upstream shadow riêng, include thư mục shadow-servers/*.conf
+  4) file rules map cho lọc method/path và chống loop
+  5) file log_format/mirror_id map (hoặc đặt trong app.conf)
+- Có sẵn ví dụ file shadow-servers (mỗi file 1 IP) và script add/remove/sync (atomic write) + reload an toàn.
+
+Đầu ra mong muốn:
+- Cung cấp mẫu cấu hình Nginx đầy đủ, tổng quát, dễ tái sử dụng.
+- Nêu rõ quy tắc/chuẩn xây dựng cấu hình để người khác đọc vào có thể mở rộng.

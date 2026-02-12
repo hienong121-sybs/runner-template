@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+echo "deprecated: nginx/entrypoint.sh is no longer used." >&2
+echo "use docker-compose nginx command + file-based templates in nginx/conf.d and nginx/upstreams." >&2
+exec nginx -g 'daemon off;'

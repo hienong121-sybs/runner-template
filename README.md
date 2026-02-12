@@ -83,9 +83,15 @@ File duoc copy:
 - `docker-compose.yml`
 - `caddy/Caddyfile`
 - `caddy/entrypoint.sh`
-- `nginx/default.template.conf`
+- `nginx/conf.d/app.conf.template`
+- `nginx/maps/mirror_rules.map`
+- `nginx/shadow-servers/.gitkeep`
+- `nginx/scripts/shadow-add.sh`
+- `nginx/scripts/shadow-rm.sh`
+- `nginx/scripts/shadow-sync.sh`
 - `nginx/setup-htpasswd.sh`
-- `nginx/entrypoint.sh`
+- `nginx/upstreams/main_upstream.conf.template`
+- `nginx/upstreams/shadow_upstream.conf.template`
 - `scripts/pull-data.js`
 - `scripts/setup-runner-helper.js`
 - `scripts/setup-runner-prev.js`
@@ -211,7 +217,7 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 
 - Runtime proxy topology:
   - Caddy: HTTP origin gateway (khong ACME, khong cap cert)
-  - Nginx: business proxy + mirror logic on plain HTTP (`:8080` mac dinh)
+  - Nginx: business proxy + shadow mirror file-based on plain HTTP (`:8080` mac dinh)
 - Endpoint `GET /cwd` tren nginx tra ve JSON:
   - `cwd`: gia tri `HOST_CWD`
   - `startTime`: timestamp UTC khi container nginx khoi dong
@@ -227,12 +233,14 @@ runner-template-tailscale --body-file .\tailscale\access-controls.hujson
   - luon exclude thu muc `.git` trong du lieu sync
 - Mirror runtime:
   - Luong chinh proxy vao `MAIN_TARGET_DNS:MAIN_TARGET_PORT` (mac dinh `127.0.0.1:3000`)
-  - Mirror 1 chieu qua danh sach `NGINX_MIRROR_URL_PORT_xx` (vd `2026021114.tail8ee506.ts.net:8080`)
-  - Khong con fallback theo bien khac; mirror chi doc tu prefix `NGINX_MIRROR_URL_PORT_`
-  - Neu `NGINX_MIRROR_URL_PORT_00` rong va co du `DOTENVRTDB_NOW_YYYYDDMMHH` + `TAILSCALE_TAILNET_DNS`, `scripts/setup-runner-prev.js` se tu sinh `NGINX_MIRROR_URL_PORT_00=<nextHour>.TAILSCALE_TAILNET_DNS:NGINX_PORT` truoc khi `docker compose up`
-  - `docker-compose.yml` dang expose san cac slot `NGINX_MIRROR_URL_PORT_00..09`; can nhieu hon thi them tiep `..._10`, `..._11`, ...
-  - Tat/bat bang `NGINX_MIRROR_ENABLED` (`1` bat, khac `1` la tat)
-  - Request mirror se tu gan header `X-Mirror-Request: 1` de tranh loop qua lai
+  - Shadow backend duoc quan ly bang file: `nginx/shadow-servers/<ip>.conf`
+  - Rules mirror duoc cau hinh trong: `nginx/maps/mirror_rules.map`
+  - Anti-loop dung header `X-Shadow: 1`, request da la shadow se khong mirror tiep
+  - Audit log mirror: `./.nginx/logs/shadow.mirror.log`
+  - Script ho tro cap nhat backend shadow (trong container): `sh /opt/nginx/scripts/shadow-add.sh`, `shadow-rm.sh`, `shadow-sync.sh`
+- Nginx logs duoc mount ra host:
+  - Thu muc host: `./.nginx/logs`
+  - File quan trong: `app.access.log`, `app.error.log`, `shadow.mirror.log`
 
 Bien moi truong quan trong:
 
@@ -242,16 +250,15 @@ Bien moi truong quan trong:
 - `MAIN_TARGET_DNS=<upstream chinh, mac dinh 127.0.0.1>`
 - `MAIN_TARGET_PORT=<upstream port chinh, mac dinh MAIN_PORT>`
 - `NGINX_PORT=8080`
-- `TAILSCALE_DNS_CURRENT=<node hien tai>`
-- `TAILSCALE_DNS_NEXTHOUR=<node mirror>`
-- `NGINX_MIRROR_ENABLED=0`
-- `NGINX_MIRROR_URL_PORT_00=<mirror target uu tien cao nhat>`
 - DNS host duoc setup trong workflow truoc `docker compose up`
 - `TAILSCALE_DNS_NAMESERVER_PRIMARY=100.100.100.100`
 - `TAILSCALE_DNS_NAMESERVER_FALLBACK=1.1.1.1`
 - `TAILSCALE_DNS_SEARCH_DOMAIN=<tailnet dns optional>`
 - `TAILSCALE_CLIENT_ID`, `TAILSCALE_CLIENT_SECRET`
 - `TAILSCALE_TAILNET` (vd: `example.com`, mac dinh `-`)
+- Mirror file-based:
+  - `nginx/maps/mirror_rules.map`
+  - `nginx/shadow-servers/*.conf`
 
 ## Giai thich nhanh path filter
 

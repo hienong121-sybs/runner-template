@@ -75,26 +75,12 @@ services:
       - TAILSCALE_DNS_NAMESERVER_PRIMARY=${TAILSCALE_DNS_NAMESERVER_PRIMARY:-100.100.100.100}
       - TAILSCALE_DNS_NAMESERVER_FALLBACK=${TAILSCALE_DNS_NAMESERVER_FALLBACK:-1.1.1.1}
       - TAILSCALE_DNS_SEARCH_DOMAIN=${TAILSCALE_DNS_SEARCH_DOMAIN:-${TAILSCALE_TAILNET_DNS:-}}
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
       - HOST_CWD=${HOST_CWD:-${PWD}}
       - MAIN_PORT=${MAIN_PORT:-3000}
       - MAIN_TARGET_DNS=${MAIN_TARGET_DNS:-127.0.0.1}
       - MAIN_TARGET_PORT=${MAIN_TARGET_PORT:-${MAIN_PORT:-3000}}
       - NGINX_PORT=${NGINX_PORT:-8080}
-      - DOTENVRTDB_NOW_YYYYDDMMHH=${DOTENVRTDB_NOW_YYYYDDMMHH:-}
-      - TAILSCALE_TAILNET_DNS=${TAILSCALE_TAILNET_DNS:-}
-      - TAILSCALE_DNS_CURRENT=${TAILSCALE_DNS_CURRENT:-}
-      - TAILSCALE_DNS_NEXTHOUR=${TAILSCALE_DNS_NEXTHOUR:-}
-      - NGINX_MIRROR_ENABLED=${NGINX_MIRROR_ENABLED:-0}
-      - NGINX_MIRROR_URL_PORT_00=${NGINX_MIRROR_URL_PORT_00:-}
-      - NGINX_MIRROR_URL_PORT_01=${NGINX_MIRROR_URL_PORT_01:-}
-      - NGINX_MIRROR_URL_PORT_02=${NGINX_MIRROR_URL_PORT_02:-}
-      - NGINX_MIRROR_URL_PORT_03=${NGINX_MIRROR_URL_PORT_03:-}
-      - NGINX_MIRROR_URL_PORT_04=${NGINX_MIRROR_URL_PORT_04:-}
-      - NGINX_MIRROR_URL_PORT_05=${NGINX_MIRROR_URL_PORT_05:-}
-      - NGINX_MIRROR_URL_PORT_06=${NGINX_MIRROR_URL_PORT_06:-}
-      - NGINX_MIRROR_URL_PORT_07=${NGINX_MIRROR_URL_PORT_07:-}
-      - NGINX_MIRROR_URL_PORT_08=${NGINX_MIRROR_URL_PORT_08:-}
-      - NGINX_MIRROR_URL_PORT_09=${NGINX_MIRROR_URL_PORT_09:-}
       - NGINX_AUTH_USER_00=${NGINX_AUTH_USER_00:-}
       - NGINX_AUTH_PASS_00=${NGINX_AUTH_PASS_00:-}
       - NGINX_AUTH_USER_01=${NGINX_AUTH_USER_01:-}
@@ -103,14 +89,24 @@ services:
       - /bin/sh
       - -ec
       - |
-        sh /opt/nginx/entrypoint.sh
+        export HOST_CWD="$${HOST_CWD:-$${PWD:-/workspace}}"
+        export MAIN_TARGET_DNS="$${MAIN_TARGET_DNS:-127.0.0.1}"
+        export MAIN_TARGET_PORT="$${MAIN_TARGET_PORT:-$${MAIN_PORT:-3000}}"
+        export NGINX_PORT="$${NGINX_PORT:-8080}"
+        export TAILSCALE_DNS_NAMESERVER_PRIMARY="$${TAILSCALE_DNS_NAMESERVER_PRIMARY:-100.100.100.100}"
+        export TAILSCALE_DNS_NAMESERVER_FALLBACK="$${TAILSCALE_DNS_NAMESERVER_FALLBACK:-1.1.1.1}"
+        export RUNNER_START_TIME="$${RUNNER_START_TIME:-$$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+        sh /opt/nginx/setup-htpasswd.sh
+        exec /docker-entrypoint.sh nginx -g 'daemon off;'
     volumes:
       - ${HOST_CWD:-${PWD}}:${HOST_CWD:-${PWD}}:ro
-      - ./nginx/default.template.conf:/etc/nginx/templates/default.template.conf:ro
+      - ./nginx/conf.d:/etc/nginx/templates/conf.d:ro
+      - ./nginx/upstreams:/etc/nginx/templates/upstreams:ro
+      - ./nginx/maps:/etc/nginx/maps:ro
+      - ./nginx/shadow-servers:/etc/nginx/shadow-servers
+      - ./nginx/scripts:/opt/nginx/scripts:ro
       - ./nginx/setup-htpasswd.sh:/opt/nginx/setup-htpasswd.sh:ro
-      - ./nginx/entrypoint.sh:/opt/nginx/entrypoint.sh:ro
-      - ./scripts/setup-resolver.sh:/opt/common/setup-resolver.sh:ro
-      - ./.nginx:/opt/nginx/runtime
+      - ./.nginx/logs:/var/log/nginx
 
   caddy:
     image: caddy:2-alpine
