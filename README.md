@@ -38,12 +38,13 @@ Repo nay dung de luu template CI/CD co the copy qua cac repo khac, gom:
 
 ## CLI bang npm link
 
-Package nay co 4 CLI:
+Package nay co 5 CLI:
 
 - `runner-template`: CLI tong hop, hien thi menu chon cac CLI con theo so thu tu.
 - `runner-template-copy`: copy nhanh file template vao cwd hien tai.
 - `runner-template-createtunnel`: tao Cloudflare tunnel + DNS record tu bien moi truong.
 - `runner-template-tailscale`: cap nhat Tailscale Access Controls (ACL) tu file hujson.
+- `runner-template-patch-env`: patch file `.env` tu comment `# Path:` (auto base64 file -> *_BASE64).
 
 1. Tai repo `runner-template`, tao global link:
    - `npm link`
@@ -57,11 +58,13 @@ Package nay co 4 CLI:
   - `1. runner-template-copy`
   - `2. runner-template-createtunnel`
   - `3. runner-template-tailscale`
+  - `4. runner-template-patch-env`
 - Nhap so tuong ung de chay dung logic CLI da chon.
 - Co the chay truc tiep bang selector:
   - `runner-template 1 --force`
   - `runner-template 2 --yes`
   - `runner-template 3 --dry-run`
+  - `runner-template 4 .env --dry-run`
 
 ### 1) CLI copy template
 
@@ -220,6 +223,33 @@ Custom body file:
 ```powershell
 runner-template-tailscale --body-file .\tailscale\access-controls.hujson
 ```
+
+### 4) CLI patch file .env (base64 from # Path)
+
+Muc tieu:
+
+- Tu dong cap nhat cac key `*_BASE64` trong file `.env` bang cach doc file tu path trong comment `# Path: ...` va encode sang base64.
+
+Format trong `.env`:
+
+```text
+# Path: ./cloudflared-config.yml
+CLOUDFLARED_CONFIG_YML_BASE64=
+# Path: ./cloudflared-credentials.json
+CLOUDFLARED_CREDENTIALS_JSON_BASE64=
+```
+
+Lenh mau:
+
+```powershell
+runner-template-patch-env .env
+runner-template-patch-env .env --dry-run
+```
+
+Ghi chu:
+
+- `# Path:` ap dung cho dong env assignment tiep theo (bo qua dong trong va comment).
+- Path tuong doi se duoc resolve theo thu muc chua file `.env`.
 
 ## Runtime pull-data (docker compose)
 

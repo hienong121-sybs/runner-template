@@ -1,2 +1,0 @@
-# Deprecated legacy file.
-# Runtime now uses `nginx/upstreams/shadow_upstream.conf.template`.

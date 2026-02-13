@@ -25,6 +25,13 @@ const COMMANDS = [
     description: "Update Tailscale Access Controls from hujson body",
     argsPrefix: ["tailscale"],
   },
+  {
+    key: "4",
+    aliases: ["patch-env", "patchenv", "env-patch", "runner-template-patch-env"],
+    name: "runner-template-patch-env",
+    description: "Patch .env by base64-encoding files referenced by '# Path:' comments",
+    argsPrefix: ["patch-env"],
+  },
 ];
 
 async function runMain(rawArgs) {
@@ -131,12 +138,14 @@ function printHelp() {
   console.log("  1 | copy | runner-template-copy");
   console.log("  2 | createtunnel | create-tunnel | runner-template-createtunnel");
   console.log("  3 | tailscale | acl | access-controls | runner-template-tailscale");
+  console.log("  4 | patch-env | patchenv | env-patch | runner-template-patch-env");
   console.log("");
   console.log("Examples:");
   console.log("  runner-template");
   console.log("  runner-template 1 --force");
   console.log("  runner-template 2 --yes");
   console.log("  runner-template 3 --dry-run");
+  console.log("  runner-template 4 .env --dry-run");
 }
 
 if (require.main === module) {

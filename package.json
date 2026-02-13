@@ -6,7 +6,8 @@
     "runner-template": "./runner-template.js",
     "runner-template-copy": "./runner-template-copy.js",
     "runner-template-createtunnel": "./runner-template-createtunnel.js",
-    "runner-template-tailscale": "./runner-template-tailscale.js"
+    "runner-template-tailscale": "./runner-template-tailscale.js",
+    "runner-template-patch-env": "./runner-template-patch-env.js"
   },
   "license": "MIT",
   "files": [
@@ -14,6 +15,7 @@
     "runner-template-copy.js",
     "runner-template-createtunnel.js",
     "runner-template-tailscale.js",
+    "runner-template-patch-env.js",
     ".bash/.bash_aliase",
     ".bash/setup-bash-aliase.sh",
     "docker-compose.yml",
@@ -35,6 +37,7 @@
     "scripts/setup-runner-prev.js",
     "scripts/setup-runner-after.js",
     "tailscale/**/*",
-    "README.md"
+    "README.md",
+    ".package/package.json"
   ]
 }

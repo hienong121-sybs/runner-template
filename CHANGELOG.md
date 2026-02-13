@@ -9,6 +9,12 @@ This project follows:
 
 ## [Unreleased]
 
+### Added
+
+- Added new CLI command `runner-template-patch-env` to patch `.env` by base64-encoding file contents referenced by `# Path:` comments.
+  - added new bin `runner-template-patch-env`
+  - added new aggregate menu selector `4` in `runner-template`
+
 ### Changed
 
 - Switched runtime topology to `Caddy (TLS gateway) -> Nginx (business proxy + mirror)`.

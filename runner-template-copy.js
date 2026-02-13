@@ -49,6 +49,7 @@ const sourceRoot = __dirname;
 const targetRoot = process.cwd();
 const CREATE_TUNNEL_MODE_SET = new Set(["create-tunnel", "createtunnel", "tunnel"]);
 const TAILSCALE_MODE_SET = new Set(["tailscale", "acl", "access-controls"]);
+const PATCH_ENV_MODE_SET = new Set(["patch-env", "patchenv", "env-patch"]);
 
 async function runCli(rawArgs, options = {}) {
   const args = Array.isArray(rawArgs) ? [...rawArgs] : [];
@@ -58,8 +59,10 @@ async function runCli(rawArgs, options = {}) {
   const createTunnelModeFromCommandName = scriptName.includes("createtunnel");
   const tailscaleModeFromArg = TAILSCALE_MODE_SET.has(firstArg);
   const tailscaleModeFromCommandName = scriptName.includes("tailscale");
+  const patchEnvModeFromArg = PATCH_ENV_MODE_SET.has(firstArg);
+  const patchEnvModeFromCommandName = scriptName.includes("patch-env") || scriptName.includes("patchenv");
 
-  if (createTunnelModeFromArg || tailscaleModeFromArg) {
+  if (createTunnelModeFromArg || tailscaleModeFromArg || patchEnvModeFromArg) {
     args.shift();
   }
 
@@ -70,6 +73,11 @@ async function runCli(rawArgs, options = {}) {
 
   if (tailscaleModeFromArg || tailscaleModeFromCommandName) {
     await runTailscaleCli(args);
+    return;
+  }
+
+  if (patchEnvModeFromArg || patchEnvModeFromCommandName) {
+    runPatchEnvCli(args);
     return;
   }
 
@@ -207,6 +215,314 @@ async function runCreateTunnelCli(rawArgs) {
   if (result.dnsFailed > 0) {
     process.exit(1);
   }
+}
+
+function runPatchEnvCli(rawArgs) {
+  const parsed = parsePatchEnvArgs(rawArgs);
+
+  if (parsed.help) {
+    printPatchEnvHelp();
+    return;
+  }
+
+  if (parsed.errors.length > 0) {
+    for (const message of parsed.errors) {
+      console.error(`error: ${message}`);
+    }
+    console.error("");
+    printPatchEnvHelp();
+    process.exit(1);
+  }
+
+  if (!parsed.envFile) {
+    console.error("missing .env file argument.");
+    console.error("");
+    printPatchEnvHelp();
+    process.exit(1);
+  }
+
+  const envFilePath = path.resolve(process.cwd(), parsed.envFile);
+
+  console.log("runner-template-patch-env");
+  console.log(`working directory: ${process.cwd()}`);
+  console.log(`env file: ${envFilePath}`);
+  console.log(`mode: ${parsed.dryRun ? "dry-run" : "write"}`);
+  console.log("");
+
+  if (!fs.existsSync(envFilePath)) {
+    console.error(`env file not found: ${envFilePath}`);
+    process.exit(1);
+  }
+
+  let rawContent = "";
+  try {
+    rawContent = fs.readFileSync(envFilePath, "utf8");
+  } catch (error) {
+    console.error(`failed to read env file: ${error.message}`);
+    process.exit(1);
+  }
+
+  const newline = rawContent.includes("\r\n") ? "\r\n" : "\n";
+  const lines = rawContent.split(/\r?\n/g);
+  const envDir = path.dirname(envFilePath);
+
+  const warnings = [];
+  let skipped = 0;
+  let failed = 0;
+  let pending = null;
+  let updated = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = String(lines[index] || "");
+    const pathMatch = line.match(/^\s*#\s*Path:\s*(.*?)\s*$/i);
+    if (pathMatch) {
+      const rawPath = normalizePatchEnvPathFromComment(pathMatch[1]);
+      if (!rawPath) {
+        warnings.push(`warning: empty # Path value at line ${index + 1}`);
+        pending = null;
+        continue;
+      }
+
+      if (pending) {
+        warnings.push(`warning: unused # Path at line ${pending.commentLine} overwritten by new # Path at line ${index + 1}`);
+      }
+
+      pending = { rawPath, commentLine: index + 1 };
+      continue;
+    }
+
+    if (!pending) {
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+    if (trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const assignment = parseEnvAssignmentLineForPatch(line);
+    if (!assignment) {
+      warnings.push(`warning: expected env assignment after # Path at line ${pending.commentLine}, got line ${index + 1}`);
+      pending = null;
+      continue;
+    }
+
+    if (!assignment.key.toUpperCase().endsWith("_BASE64")) {
+      warnings.push(`warning: skipped ${assignment.key} at line ${index + 1} (expected *_BASE64 key)`);
+      skipped += 1;
+      pending = null;
+      continue;
+    }
+
+    const sourcePath = resolvePatchEnvSourcePath(pending.rawPath, envDir);
+    if (!sourcePath || !fs.existsSync(sourcePath)) {
+      console.error(
+        `error: source file not found for ${assignment.key} (declared at # Path line ${pending.commentLine}): ${sourcePath || pending.rawPath}`,
+      );
+      failed += 1;
+      pending = null;
+      continue;
+    }
+
+    let fileBuffer;
+    try {
+      fileBuffer = fs.readFileSync(sourcePath);
+    } catch (error) {
+      console.error(`error: cannot read source file for ${assignment.key}: ${sourcePath} (${error.message})`);
+      failed += 1;
+      pending = null;
+      continue;
+    }
+
+    const base64Value = fileBuffer.toString("base64");
+    lines[index] = `${assignment.prefix}${base64Value}${assignment.spaceBeforeComment}${assignment.comment}`;
+    updated += 1;
+
+    console.log(`update: ${assignment.key}`);
+    console.log(`  from: ${pending.rawPath}`);
+    console.log(`  file: ${sourcePath}`);
+    console.log(`  bytes: ${fileBuffer.length}, base64: ${base64Value.length}`);
+    pending = null;
+  }
+
+  if (pending) {
+    warnings.push(`warning: unused # Path at line ${pending.commentLine} (no env assignment found after it)`);
+  }
+
+  if (warnings.length > 0) {
+    console.log("");
+    for (const message of warnings) {
+      console.log(message);
+    }
+  }
+
+  const patchedContent = lines.join(newline);
+  if (parsed.dryRun) {
+    console.log("");
+    console.log("dry-run: no file written.");
+  } else {
+    try {
+      fs.writeFileSync(envFilePath, patchedContent, "utf8");
+      console.log("");
+      console.log("env patched.");
+    } catch (error) {
+      console.error(`failed to write env file: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  console.log(`summary: updated=${updated}, skipped=${skipped}, failed=${failed}`);
+  if (failed > 0) {
+    process.exit(1);
+  }
+}
+
+function parsePatchEnvArgs(rawArgs) {
+  const args = Array.isArray(rawArgs) ? rawArgs : [];
+  const output = {
+    envFile: "",
+    dryRun: false,
+    help: false,
+    errors: [],
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const value = String(args[index] || "").trim();
+    if (!value) {
+      continue;
+    }
+
+    if (value === "--help" || value === "-h") {
+      output.help = true;
+      continue;
+    }
+
+    if (value === "--dry-run") {
+      output.dryRun = true;
+      continue;
+    }
+
+    if (value === "--file" || value === "-f" || value === "--env-file" || value === "--env") {
+      const next = String(args[index + 1] || "").trim();
+      if (!next) {
+        output.errors.push(`missing value for ${value}`);
+      } else {
+        output.envFile = next;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (value.startsWith("-")) {
+      output.errors.push(`unknown option: ${value}`);
+      continue;
+    }
+
+    if (!output.envFile) {
+      output.envFile = value;
+      continue;
+    }
+
+    output.errors.push(`unexpected argument: ${value}`);
+  }
+
+  return output;
+}
+
+function printPatchEnvHelp() {
+  console.log("Usage:");
+  console.log("  runner-template-patch-env <path-to-.env>");
+  console.log("  runner-template-patch-env --file <path-to-.env>");
+  console.log("");
+  console.log("Options:");
+  console.log("  --dry-run   Print updates without writing file");
+  console.log("");
+  console.log("Behavior:");
+  console.log("  - Scans .env for lines like `# Path: ./some-file`");
+  console.log("  - Base64 encodes the referenced file content and writes it into the next *_BASE64 env key");
+  console.log("");
+  console.log("Example:");
+  console.log("  # Path: ./cloudflared-config.yml");
+  console.log("  CLOUDFLARED_CONFIG_YML_BASE64=");
+}
+
+function normalizePatchEnvPathFromComment(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutHint = trimmed.includes("=>") ? trimmed.split("=>")[0].trim() : trimmed;
+  const unquoted =
+    (withoutHint.startsWith("\"") && withoutHint.endsWith("\"")) || (withoutHint.startsWith("'") && withoutHint.endsWith("'"))
+      ? withoutHint.slice(1, -1)
+      : withoutHint;
+
+  return String(unquoted || "").trim();
+}
+
+function resolvePatchEnvSourcePath(rawPath, envDir) {
+  const cleaned = normalizePatchEnvPathFromComment(rawPath);
+  if (!cleaned) {
+    return "";
+  }
+
+  if (cleaned === "~") {
+    return os.homedir();
+  }
+
+  if (cleaned.startsWith("~/")) {
+    return path.join(os.homedir(), cleaned.slice(2));
+  }
+
+  if (path.isAbsolute(cleaned)) {
+    return cleaned;
+  }
+
+  return path.resolve(envDir, cleaned);
+}
+
+function parseEnvAssignmentLineForPatch(line) {
+  const text = String(line || "");
+  const keyMatch = text.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+  if (!keyMatch) {
+    return null;
+  }
+
+  const key = keyMatch[1];
+  const eqIndex = text.indexOf("=");
+  if (eqIndex < 0) {
+    return null;
+  }
+
+  let prefixEnd = eqIndex + 1;
+  while (prefixEnd < text.length && (text[prefixEnd] === " " || text[prefixEnd] === "\t")) {
+    prefixEnd += 1;
+  }
+
+  const prefix = text.slice(0, prefixEnd);
+  const afterEq = text.slice(prefixEnd);
+
+  const commentMatch = afterEq.match(/(^|[\t ])#/);
+  let comment = "";
+  let spaceBeforeComment = "";
+  if (commentMatch) {
+    const hashIndex = commentMatch.index + commentMatch[0].length - 1;
+    comment = afterEq.slice(hashIndex);
+    const beforeHash = afterEq.slice(0, hashIndex);
+    const trailingSpace = beforeHash.match(/[ \t]*$/);
+    spaceBeforeComment = trailingSpace ? trailingSpace[0] : "";
+  }
+
+  return {
+    key,
+    prefix,
+    comment,
+    spaceBeforeComment,
+  };
 }
 
 function collectTunnelConfig(env) {

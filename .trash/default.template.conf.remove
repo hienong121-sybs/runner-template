@@ -1,6 +1,0 @@
-# Deprecated legacy file.
-# New file-based shadow mirror config:
-# - nginx/conf.d/app.conf.template
-# - nginx/upstreams/main_upstream.conf.template
-# - nginx/upstreams/shadow_upstream.conf.template
-# - nginx/maps/mirror_rules.map
